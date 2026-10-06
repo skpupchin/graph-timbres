@@ -1,12 +1,119 @@
 <!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Тембры графов · Лаборатория звука</title><meta name="description" content="Послушайте спектр лапласиана графа и отклик на удар по вершине."><link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23101820'/%3E%3Cpath d='M8 24L16 7L25 22Z' fill='none' stroke='%237ce4b0' stroke-width='2'/%3E%3Cg fill='%237ce4b0'%3E%3Ccircle cx='8' cy='24' r='3'/%3E%3Ccircle cx='16' cy='7' r='3'/%3E%3Ccircle cx='25' cy='22' r='3'/%3E%3C/g%3E%3C/svg%3E"><style>
 :root{color-scheme:dark;--bg:#101820;--panel:#18232d;--line:#30424e;--muted:#a8b8c4;--ink:#eef5f8;--green:#7ce4b0;--orange:#ffba77}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,sans-serif}main{max-width:1180px;margin:auto;padding:32px 24px}header{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:28px}.eyebrow{font-size:12px;letter-spacing:.16em;color:var(--green);text-transform:uppercase}h1{font-size:32px;letter-spacing:-.035em;margin:4px 0}h2{font-size:18px;margin:0 0 18px}.badge{border:1px solid var(--line);border-radius:30px;padding:8px 15px;color:var(--muted);font-size:14px}.layout{display:grid;grid-template-columns:320px 1fr;gap:20px}.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:24px}.controls{display:grid;gap:20px}label,.label{display:block;color:var(--muted);font-size:14px;margin-bottom:7px}select,button,input{font:inherit}select{width:100%;background:#101820;color:var(--ink);border:1px solid var(--line);padding:10px;border-radius:8px}input[type=range]{width:100%;accent-color:var(--green)}.pair{display:grid;grid-template-columns:1fr 1fr;gap:12px}.seg{display:grid;grid-template-columns:1fr 1fr;gap:6px;background:#101820;padding:5px;border-radius:10px}.seg button{padding:10px 3px;border:0;border-radius:7px;color:var(--muted);background:transparent;font-size:14px}.seg button[aria-pressed=true]{background:var(--green);color:#10241a}.buttons{display:flex;gap:10px}button{cursor:pointer}button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid var(--orange);outline-offset:3px}button.primary{flex:1;background:var(--green);color:#10241a;border:0;border-radius:10px;padding:13px;font-weight:650}button.secondary{background:transparent;color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:12px}button:disabled{opacity:.45;cursor:default}.note{font-size:14px;color:var(--muted);margin:0}.heading{display:flex;justify-content:space-between;align-items:center;gap:12px}.heading span{color:var(--muted);font-size:14px}#graph{width:100%;height:300px;display:block}#graph line{stroke:#486271;stroke-width:2}#graph .node{cursor:pointer}#graph text{fill:var(--ink);font-size:14px;pointer-events:none;text-anchor:middle;dominant-baseline:central}.legend{display:flex;gap:20px;flex-wrap:wrap;font-size:14px;color:var(--muted)}.dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--green);margin-right:7px}.orange{background:var(--orange)}.right{display:grid;gap:20px}.chart{width:100%;height:200px;display:block}.stats{display:flex;gap:24px;margin:10px 0;color:var(--muted);font-size:14px}.stats strong{color:var(--ink);font-weight:600}.readout{color:var(--green);font-variant-numeric:tabular-nums;float:right}#status{min-height:22px;color:var(--green);font-size:14px}.explain{margin-top:20px}.explain summary{cursor:pointer;font-weight:600}.explain p{color:var(--muted);max-width:950px}.formula{color:var(--green);font-family:monospace;font-size:16px}.tablewrap{max-height:230px;overflow:auto;margin-top:14px}table{width:100%;border-collapse:collapse;font-size:14px;text-align:right}th,td{padding:8px 12px;border-bottom:1px solid var(--line)}th{color:var(--muted);font-weight:500}th:first-child,td:first-child{text-align:left}[hidden]{display:none!important}@media(max-width:760px){main{padding:20px 14px}.layout{grid-template-columns:1fr}.controls{grid-template-columns:1fr 1fr;gap:16px}.controls>h2,.controls>.full{grid-column:1/-1}.panel{padding:18px}header{align-items:flex-start}.badge{display:none}h1{font-size:28px}#graph{height:260px}}@media(max-width:430px){.controls{grid-template-columns:1fr}.controls>*{grid-column:1}.stats{gap:12px;flex-wrap:wrap}}
 .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}.toolbar button{padding:8px 12px}#listenTools{margin-top:12px}#graphHint{margin-top:12px}#graph{touch-action:none}#graph:focus-visible{outline:2px solid var(--orange)}
-</style></head><body><main><header><div><h1>Тембры графов</h1></div></header><div class="layout"><section class="panel controls" aria-label="Настройки звука"><h2>Соберите эксперимент</h2><div class="full"><span class="label">Способ озвучивания</span><div class="seg" role="group" aria-label="Способ озвучивания"><button id="spectrum" aria-pressed="true">Весь спектр</button><button id="response" aria-pressed="false">Отклик на удар</button></div></div><p id="modeNote" class="note full">Равная амплитуда у каждой моды. Кратные частоты складываются.</p><div class="full"><label for="scale">Общий масштаб a <output id="scaleOut" class="readout">220 Гц</output></label><input id="scale" type="range" min="80" max="600" step="10" value="220"><p class="note">f = a√λ. При смене графа a сохраняется.</p></div><div><label for="decay">Время затухания τ <output id="decayOut" class="readout">1.0 с</output></label><input id="decay" type="range" min="0.2" max="2" step="0.1" value="1"></div><div><label for="volume">Громкость <output id="volumeOut" class="readout">35%</output></label><input id="volume" type="range" min="0" max="80" value="35"></div><div class="buttons full"><button id="play" class="primary">▶ Послушать</button><button id="stop" class="secondary" disabled>Стоп</button></div><div id="status" class="full" role="status" aria-live="polite">Выберите граф и послушайте его.</div></section><div class="right"><section class="panel"><div class="heading"><h2 id="graphTitle">Ваш граф</h2><span id="graphMeta"></span></div><div class="seg" role="group" aria-label="Режим работы"><button id="edit" aria-pressed="false">Редактировать</button><button id="hear" aria-pressed="true">Слушать</button></div><div id="editTools" class="toolbar" hidden><button id="undo" class="secondary">Отменить</button><button id="remove" class="secondary">Удалить вершину</button><button id="clear" class="secondary">Очистить</button></div><div id="listenTools" class="seg" role="group" aria-label="Выбор точки" hidden><button id="strikeTool" aria-pressed="true">Куда ударить</button><button id="listenTool" aria-pressed="false">Где слушать</button></div><p id="graphHint" class="note"></p><svg id="graph" viewBox="0 0 600 300" tabindex="0" role="group" aria-label="Вершины и рёбра графа"></svg><div class="legend" id="legend" hidden><span><i class="dot"></i>Удар</span><span><i class="dot orange"></i>Прослушивание</span></div></section><section class="panel"><div class="heading"><h2>Что прозвучит</h2><span>Общая ось частот</span></div><svg id="chart" class="chart" viewBox="0 0 640 200" role="img" aria-label="Частоты и относительные амплитуды звука"></svg><div class="stats"><span>Нижняя частота: <strong id="low"></strong></span><span>Звучащих частот: <strong id="active"></strong></span></div><p class="note">Высота столбика — |амплитуда| до нормировки громкости. Совпадающие частоты объединены.</p><details><summary>Числа: λ, частоты и амплитуды</summary><div class="tablewrap"><table><thead><tr><th>λ</th><th>Кратность</th><th>Гц</th><th>Амплитуда</th></tr></thead><tbody id="rows"></tbody></table></div></details></section></div></div><details class="panel explain"><summary>Какая модель здесь звучит?</summary><p>Лапласиан L = D − A описывает массы и пружины: ü + Lu = 0. Собственные значения λ дают частоты f = a√λ. Все графы используют один масштаб a; нижние ноты отдельно не выравниваются.</p><p><b>Весь спектр:</b> каждой положительной моде назначена амплитуда 1 и одинаковая начальная фаза. Частота кратности m получает суммарную амплитуду m. Это условное озвучивание спектра.</p><p><b>Отклик:</b> начальное смещение равно нулю, единичный импульс скорости приложен к вершине i, слушаем смещение вершины j. Для ортонормированных собственных векторов амплитуда моды равна vₖ(i)vₖ(j)/(2πfₖ). При кратном собственном значении суммируются вклады всего собственного подпространства; результат не зависит от выбранного базиса.</p><p class="formula">s(t) = e⁻ᵗ/τ ∑ Aₖ sin(2πfₖt)</p><p>Экспонента добавлена как огибающая, а не как точное решение системы с трением. Нулевая мода исключена. Каждый сигнал нормируется по пику перед применением общей громкости, поэтому сравнение абсолютной силы отклика здесь не сохраняется. Частоты выше предела Найквиста не синтезируются. Это озвучивание математической модели, а не расчёт излучения реальных пружин в воздух.</p></details></main><script>'use strict';
+.search-panel{margin-top:20px}.search-panel>summary{cursor:pointer;font-weight:600}.search-content{display:grid;gap:16px;padding-top:18px;max-width:800px}.search-content input{width:100%;background:var(--bg);color:var(--ink);border:1px solid var(--line);padding:10px;border-radius:8px}.search-content progress{width:100%;accent-color:var(--green)}.search-content a{color:var(--green)}.search-content details .note{margin-top:12px}#searchApply{margin-top:16px}#searchResult p{overflow-wrap:anywhere}
+</style></head><body><main><header><div><h1>Тембры графов</h1></div></header><div class="layout"><section class="panel controls" aria-label="Настройки звука"><h2>Соберите эксперимент</h2><div class="full"><span class="label">Способ озвучивания</span><div class="seg" role="group" aria-label="Способ озвучивания"><button id="spectrum" aria-pressed="true">Весь спектр</button><button id="response" aria-pressed="false">Отклик на удар</button></div></div><p id="modeNote" class="note full">Равная амплитуда у каждой моды. Кратные частоты складываются.</p><div class="full"><label for="scale">Общий масштаб a <output id="scaleOut" class="readout">220 Гц</output></label><input id="scale" type="range" min="80" max="600" step="10" value="220"><p class="note">f = a√λ. При смене графа a сохраняется.</p></div><div><label for="decay">Время затухания τ <output id="decayOut" class="readout">1.0 с</output></label><input id="decay" type="range" min="0.2" max="2" step="0.1" value="1"></div><div><label for="volume">Громкость <output id="volumeOut" class="readout">35%</output></label><input id="volume" type="range" min="0" max="80" value="35"></div><div class="buttons full"><button id="play" class="primary">▶ Послушать</button><button id="stop" class="secondary" disabled>Стоп</button></div><div id="status" class="full" role="status" aria-live="polite">Выберите граф и послушайте его.</div></section><div class="right"><section class="panel"><div class="heading"><h2 id="graphTitle">Ваш граф</h2><span id="graphMeta"></span></div><div class="seg" role="group" aria-label="Режим работы"><button id="edit" aria-pressed="false">Редактировать</button><button id="hear" aria-pressed="true">Слушать</button></div><div id="editTools" class="toolbar" hidden><button id="undo" class="secondary">Отменить</button><button id="clear" class="secondary">Очистить</button></div><div id="listenTools" class="seg" role="group" aria-label="Выбор точки" hidden><button id="strikeTool" aria-pressed="true">Куда ударить</button><button id="listenTool" aria-pressed="false">Где слушать</button></div><p id="graphHint" class="note"></p><svg id="graph" viewBox="0 0 600 300" tabindex="0" role="group" aria-label="Вершины и рёбра графа"></svg><div class="legend" id="legend" hidden><span><i class="dot"></i>Удар</span><span><i class="dot orange"></i>Прослушивание</span></div></section><section class="panel"><div class="heading"><h2>Что прозвучит</h2><span>Общая ось частот</span></div><svg id="chart" class="chart" viewBox="0 0 640 200" role="img" aria-label="Частоты и относительные амплитуды звука"></svg><div class="stats"><span>Нижняя частота: <strong id="low"></strong></span><span>Звучащих частот: <strong id="active"></strong></span></div><p class="note">Высота столбика — |амплитуда| до нормировки громкости. Совпадающие частоты объединены.</p><details><summary>Числа: λ, частоты и амплитуды</summary><div class="tablewrap"><table><thead><tr><th>λ</th><th>Кратность</th><th>Гц</th><th>Амплитуда</th></tr></thead><tbody id="rows"></tbody></table></div></details></section></div></div><details class="panel search-panel" id="searchPanel"><summary>Найти похожий граф</summary><div class="search-content">
+<p class="note">Нарисуйте граф выше, затем найдите другую конструкцию с похожим спектром. Ищем связные графы без весов. Исходный граф и его копии с другой нумерацией исключены. Высота звука задаётся общим масштабом a.</p>
+<p id="searchReference" class="note">При запуске поиска берём спектр текущего графа. Его можно продолжать редактировать — поиск использует сохранённый снимок.</p>
+<div class="pair"><div><label for="searchSize">Вершин в новом графе</label><input id="searchSize" type="number" min="3" max="12" step="1" value="3"></div><div><label for="searchSeconds">Искать, секунд</label><input id="searchSeconds" type="number" min="1" max="30" step="1" value="8"></div></div>
+<div class="buttons"><button class="primary" id="searchStart">Найти похожий</button><button class="secondary" id="searchStop" disabled>Остановить</button></div>
+<progress id="searchProgress" max="1" value="0" hidden aria-label="Время поиска"></progress><p id="searchStatus" class="note" role="status" aria-live="polite">Найдём другой граф с близкими отношениями частот. Точное совпадение не гарантируется.</p>
+<div id="searchResult" hidden><p>Найденные отношения: <strong id="searchFound"></strong></p><p class="note">Расстояние спектров: <span id="searchDistance"></span> — меньше лучше.</p><div class="tablewrap"><table><thead><tr><th>Цель</th><th>Ближайшая частота</th><th>Ошибка, центы</th></tr></thead><tbody id="searchCompare"></tbody></table></div><p class="note">Таблица показывает ближайшие частоты; общий поиск учитывает также лишние моды и их кратности. Это не оценка отклика на удар.</p><button id="searchApply" class="secondary" disabled>Загрузить найденный граф</button></div>
+<details><summary>Как работает поиск</summary><p class="note">Адаптация метода Ipsen–Mikhailov (2002): частоты √λ сглаживаются лоренцевыми пиками ширины γ = 0.08; сравниваем нормированные плотности по L²-расстоянию. Нижняя положительная частота каждого спектра приведена к 1, поэтому ищем отношения. Интеграл вычисляется численно на конечном интервале. Каждая положительная мода имеет равный вес в плотности.</p><p class="note">Случайно меняем связи одной вершины. Улучшение принимается всегда, ухудшение — с вероятностью exp(−Δε/(εθ)), θ = 0.04. Несвязные варианты отклоняются; каждые 1000 изменений начинаем новый случайный поиск, сохраняя лучший результат. Совпадение сглаженных спектров не гарантирует одинаковый тембр при ударе.</p><p class="note"><a href="https://arxiv.org/abs/nlin/0111023" target="_blank" rel="noopener noreferrer">Ipsen &amp; Mikhailov — Evolutionary reconstruction of networks</a> · <a href="библиотека/README.md">Обзор литературы</a></p></details>
+</div></details>
+<details class="panel explain"><summary>Какая модель здесь звучит?</summary><p>Лапласиан L = D − A описывает массы и пружины: ü + Lu = 0. Собственные значения λ дают частоты f = a√λ. Все графы используют один масштаб a; нижние ноты отдельно не выравниваются.</p><p><b>Весь спектр:</b> каждой положительной моде назначена амплитуда 1 и одинаковая начальная фаза. Частота кратности m получает суммарную амплитуду m. Это условное озвучивание спектра.</p><p><b>Отклик:</b> начальное смещение равно нулю, единичный импульс скорости приложен к вершине i, слушаем смещение вершины j. Для ортонормированных собственных векторов амплитуда моды равна vₖ(i)vₖ(j)/(2πfₖ). При кратном собственном значении суммируются вклады всего собственного подпространства; результат не зависит от выбранного базиса.</p><p class="formula">s(t) = e⁻ᵗ/τ ∑ Aₖ sin(2πfₖt)</p><p>Экспонента добавлена как огибающая, а не как точное решение системы с трением. Нулевая мода исключена. Каждый сигнал нормируется по пику перед применением общей громкости, поэтому сравнение абсолютной силы отклика здесь не сохраняется. Частоты выше предела Найквиста не синтезируются. Это озвучивание математической модели, а не расчёт излучения реальных пружин в воздух.</p></details></main><script>'use strict';
 function makeGraph(shape,n){if(shape==='grid')n=9;const edges=[];if(shape==='path'||shape==='cycle')for(let i=1;i<n;i++)edges.push([i-1,i]);if(shape==='cycle')edges.push([n-1,0]);if(shape==='star')for(let i=1;i<n;i++)edges.push([0,i]);if(shape==='complete')for(let i=0;i<n;i++)for(let j=i+1;j<n;j++)edges.push([i,j]);if(shape==='grid')for(let i=0;i<9;i++){if(i%3<2)edges.push([i,i+1]);if(i<6)edges.push([i,i+3]);}const L=Array.from({length:n},()=>Array(n).fill(0));for(const [i,j]of edges){L[i][i]++;L[j][j]++;L[i][j]--;L[j][i]--;}return{n,edges,L};}
 function eigen(L){const n=L.length,A=L.map(r=>r.slice()),V=Array.from({length:n},(_,i)=>Array.from({length:n},(_,j)=>+(i===j)));for(let iter=0;iter<100*n*n;iter++){let p=0,q=1,max=0;for(let i=0;i<n;i++)for(let j=i+1;j<n;j++)if(Math.abs(A[i][j])>max){max=Math.abs(A[i][j]);p=i;q=j;}if(max<1e-12)break;const angle=.5*Math.atan2(2*A[p][q],A[q][q]-A[p][p]),c=Math.cos(angle),s=Math.sin(angle),app=A[p][p],aqq=A[q][q],apq=A[p][q];for(let k=0;k<n;k++)if(k!==p&&k!==q){const akp=A[k][p],akq=A[k][q];A[k][p]=A[p][k]=c*akp-s*akq;A[k][q]=A[q][k]=s*akp+c*akq;}A[p][p]=c*c*app-2*s*c*apq+s*s*aqq;A[q][q]=s*s*app+2*s*c*apq+c*c*aqq;A[p][q]=A[q][p]=0;for(let k=0;k<n;k++){const vkp=V[k][p],vkq=V[k][q];V[k][p]=c*vkp-s*vkq;V[k][q]=s*vkp+c*vkq;}}return Array.from({length:n},(_,k)=>({lambda:Math.max(0,A[k][k]),v:V.map(r=>r[k])})).sort((a,b)=>a.lambda-b.lambda);}
 function partials(modes,mode,i,j,a){const groups=[];for(const m of modes){if(m.lambda<1e-8)continue;let g=groups.at(-1);if(!g||Math.abs(g.lambda-m.lambda)>1e-7){g={lambda:m.lambda,f:a*Math.sqrt(m.lambda),multiplicity:0,amplitude:0};groups.push(g);}g.multiplicity++;g.amplitude+=mode==='spectrum'?1:m.v[i]*m.v[j]/(2*Math.PI*g.f);}return groups;}
 function synth(groups,sampleRate,tau){const length=Math.ceil(6*tau*sampleRate),signal=new Float32Array(length);const valid=groups.filter(g=>g.f<sampleRate/2&&Math.abs(g.amplitude)>1e-12);let peak=0;for(let m=0;m<length;m++){const t=m/sampleRate;let x=0;for(const g of valid)x+=g.amplitude*Math.sin(2*Math.PI*g.f*t);const fade=Math.min(1,(length-1-m)/(.04*sampleRate));signal[m]=x*Math.exp(-t/tau)*Math.max(0,fade);peak=Math.max(peak,Math.abs(signal[m]));}if(peak>0)for(let m=0;m<length;m++)signal[m]/=peak;return{signal,peak};}
-if(typeof module!=='undefined')module.exports={makeGraph,eigen,partials,synth};
+function graphLaplacian(n,edges){
+  const L=Array.from({length:n},()=>Array(n).fill(0));
+  for(const [i,j] of edges){L[i][i]++;L[j][j]++;L[i][j]--;L[j][i]--;}
+  return L;
+}
+function connectedGraph(n,edges){
+  const neighbours=Array.from({length:n},()=>[]);
+  for(const [a,b]of edges){neighbours[a].push(b);neighbours[b].push(a);}
+  const seen=new Set([0]),queue=[0];
+  for(let p=0;p<queue.length;p++)for(const v of neighbours[queue[p]])if(!seen.has(v)){seen.add(v);queue.push(v);}
+  return seen.size===n;
+}
+function modalRatios(n,edges){
+  const frequencies=eigen(graphLaplacian(n,edges)).filter(m=>m.lambda>1e-8).map(m=>Math.sqrt(m.lambda));
+  return frequencies.map(f=>f/frequencies[0]);
+}
+// Ipsen–Mikhailov eqs. (1),(2). Exact half-line normalization; finite quadrature.
+function makeSpectralMetric(target,n){
+  const gamma=.08,count=768;
+  const bound=Math.sqrt(n/(2*(1-Math.cos(Math.PI/n))));
+  const upper=Math.max(bound,target.at(-1))+8*gamma,step=upper/count;
+  function density(frequencies){
+    const normalization=frequencies.reduce((sum,f)=>sum+Math.PI/2+Math.atan(f/gamma),0);
+    const values=new Float64Array(count);
+    for(let k=0;k<count;k++){
+      const x=(k+.5)*step;
+      for(const f of frequencies)values[k]+=gamma/((x-f)**2+gamma**2)/normalization;
+    }
+    return values;
+  }
+  const goal=density(target);
+  return frequencies=>{
+    const actual=density(frequencies);let sum=0;
+    for(let k=0;k<count;k++)sum+=(actual[k]-goal[k])**2;
+    return Math.sqrt(sum*step);
+  };
+}
+function isomorphicGraphs(n,a,m,b){
+  if(n!==m||a.length!==b.length)return false;
+  const A=graphLaplacian(n,a),B=graphLaplacian(n,b),da=A.map((r,i)=>r[i]),db=B.map((r,i)=>r[i]);
+  if(da.slice().sort((a,b)=>a-b).join()!==db.slice().sort((a,b)=>a-b).join())return false;
+  const options=da.map((degree,i)=>db.map((d,j)=>d===degree?j:-1).filter(j=>j>=0));
+  const order=Array.from({length:n},(_,i)=>i).sort((i,j)=>options[i].length-options[j].length||da[j]-da[i]);
+  const map=Array(n).fill(-1),used=Array(n).fill(false);
+  function visit(depth){
+    if(depth===n)return true;
+    const i=order[depth];
+    for(const j of options[i])if(!used[j]){
+      let valid=true;
+      for(let p=0;p<depth;p++){const k=order[p];if(A[i][k]!==B[j][map[k]]){valid=false;break;}}
+      if(valid){map[i]=j;used[j]=true;if(visit(depth+1))return true;used[j]=false;map[i]=-1;}
+    }
+    return false;
+  }
+  return visit(0);
+}
+function searchWorker(){
+  self.onmessage=({data})=>{
+    try{
+      const {n,target,seconds,original}=data;
+      if(!Number.isInteger(n)||n<3||n>12||!Array.isArray(target)||!target.length||target.some(x=>!Number.isFinite(x)||x<1||x>8)||!Number.isFinite(seconds)||seconds<1||seconds>30)throw new Error('Некорректные параметры поиска.');
+      const metric=makeSpectralMetric(target,Math.max(n,original.n)),start=performance.now();
+      let best=null,steps=0,lastReport=0,current=null,error=Infinity;
+      function evaluate(edges){const ratios=modalRatios(n,edges);return{edges,ratios,error:metric(ratios),n};}
+      function consider(candidate){if((!best||candidate.error<best.error)&&!isomorphicGraphs(n,candidate.edges,original.n,original.edges))best=candidate;}
+      function fresh(){
+        const edges=[];
+        for(let i=1;i<n;i++)edges.push([i,Math.floor(Math.random()*i)]);
+        const probability=Math.random()*.6;
+        for(let i=0;i<n;i++)for(let j=i+1;j<n;j++)if(Math.random()<probability&&!edges.some(([a,b])=>a===i&&b===j||a===j&&b===i))edges.push([i,j]);
+        return evaluate(edges);
+      }
+      if(original.n===n&&connectedGraph(n,original.edges))current=evaluate(original.edges);
+      else current=fresh();
+      consider(current);error=current.error;
+      self.postMessage({type:'progress',best,steps,elapsed:0});
+      while(performance.now()-start<seconds*1000&&(!best||best.error>1e-9)){
+        if(steps>0&&steps%1000===0){current=fresh();error=current.error;consider(current);}
+        const vertex=Math.floor(Math.random()*n),degree=1+Math.floor(Math.random()*(n-1));
+        const candidates=Array.from({length:n},(_,i)=>i).filter(i=>i!==vertex);
+        for(let i=candidates.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[candidates[i],candidates[j]]=[candidates[j],candidates[i]];}
+        const edges=current.edges.filter(([a,b])=>a!==vertex&&b!==vertex).concat(candidates.slice(0,degree).map(i=>[vertex,i]));
+        steps++;
+        if(connectedGraph(n,edges)){
+          const candidate=evaluate(edges),delta=candidate.error-error;
+          consider(candidate);
+          if(delta<=0||Math.random()<Math.exp(-delta/(Math.max(error,1e-12)*.04))){current=candidate;error=candidate.error;}
+        }
+        const elapsed=performance.now()-start;
+        if(elapsed-lastReport>250){lastReport=elapsed;self.postMessage({type:'progress',best,steps,elapsed});}
+      }
+      self.postMessage({type:'done',best,steps,elapsed:performance.now()-start});
+    }catch(err){self.postMessage({type:'error',message:err.message});}
+  };
+}
+function spectralWorkerSource(){return [eigen,graphLaplacian,connectedGraph,modalRatios,makeSpectralMetric,isomorphicGraphs,searchWorker].map(f=>f.toString()).join('\n')+'\nsearchWorker();';}
+
+if(typeof module!=='undefined')module.exports={makeGraph,eigen,partials,synth,graphLaplacian,connectedGraph,modalRatios,makeSpectralMetric,spectralWorkerSource,isomorphicGraphs};
 if(typeof document!=='undefined'){
 const $=id=>document.getElementById(id),ns='http://www.w3.org/2000/svg';let mode='spectrum',workspace='hear',tool='strike',strike=0,listen=0,selected=null,history=[],drag=null,graph={n:3,points:[[160,150],[300,150],[440,150]],edges:[[0,1],[1,2]]},modes,groups,context,source,gain,playToken=0;
 function svg(tag,attrs,parent,text){const el=document.createElementNS(ns,tag);for(const[k,v]of Object.entries(attrs))el.setAttribute(k,String(v));if(text!==undefined)el.textContent=text;parent.appendChild(el);return el;}
@@ -15,7 +122,7 @@ function snapshot(){return JSON.stringify({graph,strike,listen});}
 function remember(value=snapshot()){history.push(value);if(history.length>100)history.shift();}
 function rebuild(){stop();graph.n=graph.points.length;graph.L=Array.from({length:graph.n},()=>Array(graph.n).fill(0));for(const [i,j]of graph.edges){graph.L[i][i]++;graph.L[j][j]++;graph.L[i][j]--;graph.L[j][i]--;}strike=Math.max(0,Math.min(strike,graph.n-1));listen=Math.max(0,Math.min(listen,graph.n-1));modes=eigen(graph.L);update();}
 function choose(i,action=tool){if(workspace==='edit'){if(selected===null){selected=i;drawGraph();}else if(selected===i){selected=null;drawGraph();}else{remember();const a=selected,b=i,index=graph.edges.findIndex(([x,y])=>x===a&&y===b||x===b&&y===a);if(index<0)graph.edges.push([a,b]);else graph.edges.splice(index,1);selected=null;rebuild();}}else if(mode==='response'){stop();if(action==='strike')strike=i;else listen=i;update();if(action==='strike')play();}}
-function drawGraph(){const root=$('graph');root.replaceChildren();for(const [i,j]of graph.edges)svg('line',{x1:graph.points[i][0],y1:graph.points[i][1],x2:graph.points[j][0],y2:graph.points[j][1]},root);graph.points.forEach(([x,y],i)=>{const marked=workspace==='hear'&&mode==='response',struck=marked&&i===strike,heard=marked&&i===listen;const g=svg('g',{class:'node','data-index':i,tabindex:0,role:'button','aria-label':'Вершина '+(i+1)},root);if(heard)svg('circle',{cx:x,cy:y,r:23,fill:'none',stroke:'#ffba77','stroke-width':3},g);svg('circle',{cx:x,cy:y,r:17,fill:struck?'#7ce4b0':'#223543',stroke:workspace==='edit'&&selected===i?'#ffba77':struck?'#7ce4b0':'#5e7787','stroke-width':workspace==='edit'&&selected===i?4:2},g);const text=svg('text',{x,y},g,String(i+1));if(struck)text.style.fill='#10241a';g.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();choose(i);}});});$('graphMeta').textContent='Вершин: '+graph.n+' · Рёбер: '+graph.edges.length;$('remove').disabled=selected===null;$('undo').disabled=!history.length;$('clear').disabled=!graph.n;}
+function drawGraph(){const root=$('graph');root.replaceChildren();for(const [i,j]of graph.edges)svg('line',{x1:graph.points[i][0],y1:graph.points[i][1],x2:graph.points[j][0],y2:graph.points[j][1]},root);graph.points.forEach(([x,y],i)=>{const marked=workspace==='hear'&&mode==='response',struck=marked&&i===strike,heard=marked&&i===listen;const g=svg('g',{class:'node','data-index':i,tabindex:0,role:'button','aria-label':'Вершина '+(i+1)},root);if(heard)svg('circle',{cx:x,cy:y,r:23,fill:'none',stroke:'#ffba77','stroke-width':3},g);svg('circle',{cx:x,cy:y,r:17,fill:struck?'#7ce4b0':'#223543',stroke:workspace==='edit'&&selected===i?'#ffba77':struck?'#7ce4b0':'#5e7787','stroke-width':workspace==='edit'&&selected===i?4:2},g);const text=svg('text',{x,y},g,String(i+1));if(struck)text.style.fill='#10241a';g.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();choose(i);}});});$('graphMeta').textContent='Вершин: '+graph.n+' · Рёбер: '+graph.edges.length;$('undo').disabled=!history.length;$('clear').disabled=!graph.n;}
 function point(e){const p=new DOMPoint(e.clientX,e.clientY).matrixTransform($('graph').getScreenCTM().inverse());return[Math.max(25,Math.min(575,p.x)),Math.max(25,Math.min(275,p.y))];}
 $('graph').addEventListener('pointerdown',e=>{if(e.button!==0&&e.button!==2)return;const node=e.target.closest('.node'),i=node?+node.dataset.index:null;if(e.button===2){e.preventDefault();if(drag)return;if(i!==null){if(workspace==='edit'){selected=i;removeVertex();}else choose(i,'listen');}return;}drag={id:e.pointerId,index:i,start:point(e),before:snapshot(),moved:false};$('graph').setPointerCapture(e.pointerId);});
 $('graph').addEventListener('pointermove',e=>{if(!drag||drag.id!==e.pointerId||workspace!=='edit'||drag.index===null)return;const p=point(e);if(Math.hypot(p[0]-drag.start[0],p[1]-drag.start[1])>4)drag.moved=true;if(drag.moved){graph.points[drag.index]=p;drawGraph();}});
@@ -23,12 +130,71 @@ $('graph').addEventListener('pointerup',e=>{if(!drag||drag.id!==e.pointerId)retu
 $('graph').addEventListener('contextmenu',e=>e.preventDefault());
 $('graph').addEventListener('pointercancel',()=>{if(drag?.moved){const old=JSON.parse(drag.before);graph=old.graph;drawGraph();}drag=null;});
 function removeVertex(){if(workspace!=='edit'||selected===null)return;remember();const i=selected;graph.points.splice(i,1);graph.edges=graph.edges.filter(([a,b])=>a!==i&&b!==i).map(([a,b])=>[a>i?a-1:a,b>i?b-1:b]);strike=strike>i?strike-1:strike===i?0:strike;listen=listen>i?listen-1:listen===i?0:listen;selected=null;rebuild();}
-$('remove').addEventListener('click',removeVertex);$('graph').addEventListener('keydown',e=>{if(e.key==='Delete'||e.key==='Backspace'){e.preventDefault();removeVertex();}if(e.key==='Escape'){selected=null;drawGraph();}});
+$('graph').addEventListener('keydown',e=>{if(e.key==='Delete'||e.key==='Backspace'){e.preventDefault();removeVertex();}if(e.key==='Escape'){selected=null;drawGraph();}});
 $('undo').addEventListener('click',()=>{if(!history.length)return;const old=JSON.parse(history.pop());graph=old.graph;strike=old.strike;listen=old.listen;selected=null;rebuild();});$('clear').addEventListener('click',()=>{remember();graph.points=[];graph.edges=[];selected=null;rebuild();});
 for(const name of ['edit','hear'])$(name).addEventListener('click',()=>{stop();workspace=name;selected=null;update();});for(const name of ['strike','listen'])$(name+'Tool').addEventListener('click',()=>{tool=name;update();});
 function drawChart(){const root=$('chart');root.replaceChildren();const maxF=Math.max(4,Math.sqrt(graph.n))*+$('scale').value,peak=Math.max(...groups.map(g=>Math.abs(g.amplitude)),1e-15);for(let tick=0;tick<=4;tick++){const x=42+tick*140;svg('line',{x1:x,y1:15,x2:x,y2:165,stroke:'#30424e','stroke-dasharray':'3 5'},root);svg('text',{x,y:190,fill:'#a8b8c4','text-anchor':'middle','font-size':12},root,String(Math.round(maxF*tick/4)));}svg('line',{x1:42,y1:165,x2:602,y2:165,stroke:'#5e7787'},root);groups.forEach(g=>{const x=42+560*g.f/maxF,h=140*Math.abs(g.amplitude)/peak;const bar=svg('rect',{x:x-4,y:165-h,width:8,height:Math.max(1,h),rx:3,fill:Math.abs(g.amplitude)>peak*1e-7?'#7ce4b0':'#486271'},root);svg('title',{},bar,`${g.f.toFixed(2)} Гц; λ=${g.lambda.toFixed(4)}; амплитуда ${g.amplitude.toPrecision(4)}`);});$('rows').replaceChildren(...groups.map(g=>{const tr=document.createElement('tr');for(const v of [g.lambda.toFixed(4),g.multiplicity,g.f.toFixed(2),g.amplitude.toPrecision(4)]){const td=document.createElement('td');td.textContent=v;tr.appendChild(td);}return tr;}));const active=groups.filter(g=>Math.abs(g.amplitude)>peak*1e-7);$('low').textContent=active.length?active[0].f.toFixed(1)+' Гц':'нет';$('active').textContent=active.length;}
 function update(){groups=partials(modes,mode,strike,listen,+$('scale').value);$('scaleOut').textContent=$('scale').value+' Гц';$('decayOut').textContent=(+$('decay').value).toFixed(1)+' с';$('volumeOut').textContent=$('volume').value+'%';$('spectrum').setAttribute('aria-pressed',mode==='spectrum');$('response').setAttribute('aria-pressed',mode==='response');$('edit').setAttribute('aria-pressed',workspace==='edit');$('hear').setAttribute('aria-pressed',workspace==='hear');$('editTools').hidden=workspace!=='edit';$('listenTools').hidden=workspace!=='hear'||mode!=='response';$('legend').hidden=workspace!=='hear'||mode!=='response';$('strikeTool').setAttribute('aria-pressed',tool==='strike');$('listenTool').setAttribute('aria-pressed',tool==='listen');$('graphHint').textContent=workspace==='edit'?'Клик по фону — вершина; две вершины подряд — добавить или убрать ребро. Перетаскивайте вершины. ПКМ по вершине — удалить; Delete — удалить выбранную; Esc — снять выбор.':mode==='response'?'ЛКМ по вершине — ударить; ПКМ — слушать здесь. На сенсорном экране выберите действие кнопками выше.':'Нажмите «Послушать», чтобы услышать весь спектр графа.';$('modeNote').textContent=mode==='spectrum'?'Равная амплитуда у каждой моды. Кратные частоты складываются.':'Единичный удар; слушаем смещение. Симметрия может погасить отдельные частоты.';drawGraph();drawChart();$('play').disabled=!groups.some(g=>Math.abs(g.amplitude)>1e-12);$('status').textContent=graph.n===0?'Добавьте вершины и соедините их рёбрами.':graph.edges.length===0?'Соедините вершины, чтобы появились звучащие частоты.':'Готово к прослушиванию.';}
 for(const id of ['scale','decay'])$(id).addEventListener('input',()=>{stop();update();});$('volume').addEventListener('input',()=>{$('volumeOut').textContent=$('volume').value+'%';if(gain)gain.gain.setTargetAtTime(+$('volume').value/100,context.currentTime,.02);});for(const name of ['spectrum','response'])$(name).addEventListener('click',()=>{stop();mode=name;update();});$('stop').addEventListener('click',()=>{stop();$('status').textContent='Воспроизведение остановлено.';});async function play(){stop();const token=playToken;try{const Audio=window.AudioContext||window.webkitAudioContext;if(!Audio)throw new Error('В этом браузере недоступен Web Audio.');context??=new Audio();await context.resume();if(token!==playToken)return;const {signal,peak}=synth(groups,context.sampleRate,+$('decay').value);if(peak<1e-14){$('status').textContent='В выбранной вершине нет колебательного отклика.';return;}const buffer=context.createBuffer(1,signal.length,context.sampleRate);buffer.copyToChannel(signal,0);source=context.createBufferSource();source.buffer=buffer;gain=context.createGain();gain.gain.value=+$('volume').value/100;source.connect(gain).connect(context.destination);source.onended=()=>{if(token===playToken){stop();$('status').textContent='Звук завершён. Можно сравнить другой граф.';}};source.start();$('stop').disabled=false;$('play').textContent='↻ Ещё раз';$('status').textContent=mode==='spectrum'?'Звучит весь положительный спектр.':`Удар: ${strike+1} · слушаем: ${listen+1}`;}catch(err){stop();$('status').textContent='Не удалось включить звук: '+err.message;}}
+let spectrumWorker=null,searchBest=null,searchTarget=null;
+function endSearch(){if(spectrumWorker){spectrumWorker.terminate();spectrumWorker=null;}$('searchStart').disabled=false;$('searchStop').disabled=true;$('searchProgress').hidden=true;$('searchApply').disabled=!searchBest;}
+function showSearchBest(best){
+  searchBest=best;$('searchResult').hidden=false;$('searchApply').disabled=!!spectrumWorker;
+  const distinct=[];
+  for(const r of best.ratios){const last=distinct.at(-1);if(last&&Math.abs(last.r-r)<1e-6)last.count++;else distinct.push({r,count:1});}
+  $('searchFound').textContent=distinct.map(({r,count})=>r.toFixed(4)+(count>1?' ×'+count:'')).join(' · ');
+  $('searchDistance').textContent=best.error.toFixed(5);
+  $('searchCompare').replaceChildren(...searchTarget.map(r=>{
+    const nearest=best.ratios.reduce((a,b)=>Math.abs(Math.log(b/r))<Math.abs(Math.log(a/r))?b:a),cents=1200*Math.log2(nearest/r);
+    const tr=document.createElement('tr');
+    for(const value of [r.toFixed(4),nearest.toFixed(4),(cents>=0?'+':'')+cents.toFixed(1)]){const td=document.createElement('td');td.textContent=value;tr.appendChild(td);}return tr;
+  }));
+}
+$('searchPanel').addEventListener('toggle',()=>{if($('searchPanel').open&&!spectrumWorker)$('searchSize').value=String(Math.max(3,Math.min(12,graph.n)));});
+$('searchStart').addEventListener('click',()=>{
+  if(spectrumWorker)return;
+  let target,n,seconds;
+  try{
+    if(graph.n>12)throw new Error('Пока поиск поддерживает исходные графы до 12 вершин.');
+    if(graph.n<2||!graph.edges.length)throw new Error('Нарисуйте граф хотя бы с одним ребром.');
+    const positive=modes.filter(m=>m.lambda>1e-8).map(m=>Math.sqrt(m.lambda));
+    target=positive.map(f=>f/positive[0]);
+    if(target.at(-1)>8)throw new Error('Слишком широкий спектр: отношение верхней частоты к нижней больше 8.');
+    n=Number($('searchSize').value);seconds=Number($('searchSeconds').value);
+    if(!Number.isInteger(n)||n<3||n>12)throw new Error('Число вершин — целое от 3 до 12.');
+    if(!Number.isFinite(seconds)||seconds<1||seconds>30)throw new Error('Время поиска — от 1 до 30 секунд.');
+    if(!window.Worker)throw new Error('В этом браузере недоступен фоновый поиск.');
+  }catch(err){$('searchStatus').textContent=err.message;return;}
+  searchTarget=target;searchBest=null;const original={n:graph.n,edges:graph.edges.map(e=>e.slice())};$('searchReference').textContent='Ищем по снимку графа: '+graph.n+' вершин · '+graph.edges.length+' рёбер. Отношения мод: '+target.map(r=>r.toFixed(3)).join(' · ');$('searchResult').hidden=true;$('searchApply').disabled=true;
+  let url;
+  try{
+    url=URL.createObjectURL(new Blob([spectralWorkerSource()],{type:'text/javascript'}));
+    spectrumWorker=new Worker(url);
+    URL.revokeObjectURL(url);
+    const worker=spectrumWorker;
+    $('searchStart').disabled=true;$('searchStop').disabled=false;$('searchProgress').hidden=false;$('searchProgress').value=0;
+    $('searchStatus').textContent='Ищем связный граф без весов…';
+    worker.onmessage=({data})=>{
+      if(spectrumWorker!==worker)return;
+      if(data.type==='error'){endSearch();$('searchStatus').textContent='Не удалось выполнить поиск: '+data.message;return;}
+      if(data.best)showSearchBest(data.best);$('searchProgress').value=Math.min(1,data.elapsed/(seconds*1000));
+      $('searchStatus').textContent='Проверено изменений: '+data.steps+' · '+(data.elapsed/1000).toFixed(1)+' с';
+      if(data.type==='done'){endSearch();if(!data.best){$('searchStatus').textContent='Другой связный граф не найден за отведённое время. Попробуйте увеличить время или изменить число вершин.';return;}$('searchStatus').textContent+=(data.best.error<1e-9?' · Спектры совпали в пределах численной точности.':' · Поиск завершён. Показан лучший найденный вариант.');}
+    };
+    worker.onerror=()=>{if(spectrumWorker!==worker)return;endSearch();$('searchStatus').textContent='Браузер не смог запустить фоновый поиск. Попробуйте другой браузер.';};
+    worker.postMessage({n,target,seconds,original});
+  }catch(err){if(url)URL.revokeObjectURL(url);endSearch();$('searchStatus').textContent='Не удалось начать поиск: '+err.message;}
+});
+$('searchStop').addEventListener('click',()=>{endSearch();$('searchStatus').textContent='Поиск остановлен. Лучший полученный вариант сохранён.';});
+$('searchApply').addEventListener('click',()=>{
+  if(!searchBest||spectrumWorker)return;
+  remember();const n=searchBest.n;
+  graph={n,edges:searchBest.edges.map(e=>e.slice()),points:Array.from({length:n},(_,i)=>[300+230*Math.cos(i*2*Math.PI/n-Math.PI/2),150+110*Math.sin(i*2*Math.PI/n-Math.PI/2)])};
+  mode='spectrum';workspace='hear';strike=listen=0;selected=null;rebuild();
+  $('searchStatus').textContent='Граф загружен. Нажмите «Послушать». Замену можно отменить в редакторе.';
+  $('graph').scrollIntoView({behavior:'smooth',block:'center'});
+});
+
 $('play').addEventListener('click',play);
 rebuild();
 }
