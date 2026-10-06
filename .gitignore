@@ -1,0 +1,7 @@
+# Downloaded papers stay in the local library; publish the bibliography only.
+библиотека/*.pdf
+
+# Local and temporary files
+.DS_Store
+Thumbs.db
+*.tmp
