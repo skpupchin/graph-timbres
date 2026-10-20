@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Нелинейный граф · кубические пружины</title>
+<style>
+:root{color-scheme:dark;--bg:#0d141b;--panel:#17242e;--edge:#304553;--ink:#e9f3f6;--sub:#aec1cb;--accent:#79e3ba;--hot:#ffb676}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,Arial,sans-serif}main{max-width:1160px;margin:auto;padding:24px 16px 70px}header{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:18px}h1{font-size:clamp(22px,4vw,32px);margin:0}h2{font-size:18px;margin:0 0 12px}.sub{color:var(--sub);font-size:13px}.layout{display:grid;grid-template-columns:370px minmax(0,1fr);gap:16px}.panel{background:var(--panel);border:1px solid var(--edge);border-radius:14px;padding:18px}.stack{display:grid;gap:16px}.group{border-top:1px solid var(--edge);padding-top:12px}.group:first-child{border-top:0;padding-top:0}label{display:block;margin-bottom:4px;color:var(--sub);font-size:13px}.rangeHead{display:flex;justify-content:space-between;gap:10px}output{color:var(--accent);font-variant-numeric:tabular-nums}input[type=range]{width:100%;accent-color:var(--accent)}input[type=file]{max-width:100%;font-size:13px}button,select{font:inherit;cursor:pointer;background:#101e28;color:var(--ink);border:1px solid var(--edge);border-radius:8px;padding:9px 11px}button:hover{border-color:var(--accent)}button:disabled{opacity:.4;cursor:default}button.active,button.primary{color:#072218;background:var(--accent);border-color:var(--accent);font-weight:700}button.hot{color:#2c1607;background:var(--hot);border-color:var(--hot)}.row{display:flex;flex-wrap:wrap;gap:7px}.row>*{flex:1}.row.tiny button{font-size:13px}select{width:100%}#graph{width:100%;height:auto;aspect-ratio:600/340;display:block;touch-action:none;background:#101e28;border:1px solid var(--edge);border-radius:10px}.node{cursor:pointer}.node text{pointer-events:none;fill:#081719;font-weight:700}.edge{stroke:#627d8a;stroke-linecap:round}canvas{width:100%;height:150px;background:#101e28;border:1px solid var(--edge);border-radius:8px}.bar{height:7px;background:#304553;border-radius:7px;overflow:hidden;margin:8px 0}.bar>div{width:0%;height:100%;background:var(--accent)}#status{min-height:42px;color:var(--accent);font-size:13px;white-space:pre-line}.textSmall{font-size:12px;color:var(--sub)}details{margin-top:10px}summary{cursor:pointer}code{color:var(--accent)}@media(max-width:800px){.layout{grid-template-columns:1fr}}@media(max-width:430px){.panel{padding:13px}}
+</style></head>
+<body><main><header><div><div class="sub">Автономный эксперимент · без библиотек и сервера</div><h1>Нелинейные тембры графов</h1></div><span class="sub">Пружины F(d) = k(d + αd³/d₀²)</span></header>
+<div class="layout">
+<section class="panel stack">
+ <div class="group"><h2>Граф</h2><div class="row tiny"><button id="editMode" class="active">Редактировать</button><button id="strikeMode">Куда подать звук</button><button id="listenMode">Слушать вершину</button></div><p class="textSmall" id="graphHint">Клик по пустому месту — новая вершина. Два клика по вершинам — соединить или убрать ребро. ПКМ по вершине — удалить. Максимум 12 вершин.</p><svg id="graph" viewBox="0 0 600 340" role="group" aria-label="Редактор графа"></svg><div class="row tiny" style="margin-top:9px"><button id="undo">Отменить</button><button id="clear">Очистить</button></div><div class="sub" id="graphInfo"></div></div>
+ <div class="group"><h2>Параметры</h2>
+ <div class="rangeHead"><label for="alpha">Кубическая нелинейность α</label><output id="alphaVal"></output></div><input type="range" id="alpha" min="0" max="20" step="0.25" value="3">
+ <div class="rangeHead"><label for="scale">Частотный масштаб</label><output id="scaleVal"></output></div><input type="range" id="scale" min="50" max="350" step="10" value="180">
+ <div class="rangeHead"><label for="damping">Затухание τ</label><output id="dampingVal"></output></div><input type="range" id="damping" min="0.15" max="3" step="0.05" value="0.9">
+ <div class="rangeHead"><label for="drive">Сила входного сигнала</label><output id="driveVal"></output></div><input type="range" id="drive" min="0" max="20" step="0.5" value="5">
+ <div class="rangeHead"><label for="wet">Dry / Wet</label><output id="wetVal"></output></div><input type="range" id="wet" min="0" max="100" step="5" value="85">
+ <div class="rangeHead"><label for="gain">Громкость wet после выравнивания</label><output id="gainVal"></output></div><input type="range" id="gain" min="0" max="300" step="10" value="100">
+ <p class="textSmall">α = 0 возвращает линейную модель. После изменения параметров нажми «Рассчитать и слушать» заново. Громкость wet нормируется относительно исходника, поэтому 100% wet действительно означает полный переход на обработанный звук.</p></div>
+ <div class="group"><h2>Источник звука</h2><div class="row"><button id="impulseMode" class="active">Удар</button><button id="fileMode">Аудиотрек</button></div>
+ <div id="impulsePane"><div class="rangeHead"><label for="impulse">Сила удара</label><output id="impulseVal"></output></div><input id="impulse" type="range" min="0.05" max="3" step="0.05" value="1"></div>
+ <div id="filePane" hidden><label for="audioFile">Выбрать аудиофайл с устройства</label><input id="audioFile" type="file" accept="audio/*,.wav,.mp3,.ogg,.m4a,.flac"><p class="textSmall" id="fileInfo">Обрабатывается весь аудиофайл (22 050 Гц, моно). Всё локально, без загрузки на сервер. Для длинных записей потребуется больше памяти.</p></div></div>
+ <div class="group"><div class="row"><button id="render" class="primary">Рассчитать и слушать</button><button id="stop">Стоп</button></div><div class="row" style="margin-top:7px"><button id="replay" disabled>Снова</button><button id="save" disabled>Скачать WAV</button></div><div class="bar"><div id="progress"></div></div><div id="status" role="status" aria-live="polite">Готово. Выбери входную и выходную вершины.</div></div>
+</section>
+<div class="stack"><section class="panel"><h2>Результат</h2><p class="sub">Временной сигнал после моделирования</p><canvas id="wave" width="900" height="230"></canvas><p class="sub" style="margin-top:15px">Спектр выходного звука · фрагмент записи</p><canvas id="spectrum" width="900" height="230"></canvas><p class="textSmall">Новый спектр рассчитывается через FFT; при α = 0 система линейна и новых частот не создаёт. При α &gt; 0 появляются гармоники и интермодуляция.</p></section>
+<section class="panel"><h2>Математическая модель</h2><p>Для вершины <i>i</i> (масса = 1):</p>
+<p style="font-size:17px;color:var(--accent);overflow:auto"><code>q̈ᵢ + (2/τ)q̇ᵢ + ω₀² [ εqᵢ + Σⱼ kᵢⱼ(dᵢⱼ + αdᵢⱼ³/d₀²) ] = bᵢu(t)</code></p>
+<p class="sub"><code>dᵢⱼ = qᵢ − qⱼ, ω₀ = 2πa, ε = 0.01, d₀ = 0.005</code>. Слабое закрепление ε убирает нулевую трансляционную моду. α &gt; 0 даёт жёсткую (hardening) пружину. Выход — смещение выбранной вершины. На удар задаётся начальная скорость; трек подаётся как внешняя сила. Для слышимого действия на обычной записи кубический член масштабирован характерным смещением d₀ = 0.005: F(d) = k[d + αd³/d₀²].</p>
+<p class="sub">Расчёт — прямое интегрирование уравнений полунеявным методом Эйлера с подшагами и затуханием; на каждом подшаге вычисляются нелинейные силы на рёбрах. Это не свёртка с импульсным откликом. Для очень больших α и амплитуд результат может перестать быть устойчивым — в таком случае будет показана ошибка. При обработке трека dry/wet смешиваются после интегрирования.</p>
+<details><summary>Что проверить</summary><p class="sub">Поставь α = 0, затем α = 5–10 и сравни звуки. Для демонстрации новых частот лучше загружать запись чистых гитарных нот или двух синусоид: изменения будут отчётливее, чем на насыщенном миксе. Попробуй поменять входную и выходную вершины. Увеличение «Силы входного сигнала» усиливает нелинейность даже при неизменном α. Wet автоматически выравнивается по среднеквадратичной громкости с оригиналом, а ползунок «Громкость wet после выравнивания» задаёт дополнительное усиление.</p></details></section></div></div></main>
+<script>
+'use strict';
+const $=id=>document.getElementById(id);const NS='http://www.w3.org/2000/svg';
+let points=[[100,160],[240,90],[370,160],[500,235]],edges=[[0,1],[1,2],[2,3],[0,2]],strike=0,listen=2,tool='edit',chosen=null,history=[],sourceMode='impulse',audioContext=null,decoded=null,playing=null,last=null,job=0;
+function snapshot(){return JSON.stringify({points,edges,strike,listen});}
+function commit(){history.push(snapshot());if(history.length>60)history.shift();}
+function svg(tag,attrs,parent,text){let el=document.createElementNS(NS,tag);for(let [k,v] of Object.entries(attrs))el.setAttribute(k,v);if(text!=null)el.textContent=text;parent.append(el);return el;}
+function drawGraph(){let root=$('graph');root.replaceChildren();edges.forEach(([i,j])=>{let a=points[i],b=points[j];svg('line',{x1:a[0],y1:a[1],x2:b[0],y2:b[1],class:'edge','stroke-width':4},root);});points.forEach(([x,y],i)=>{let g=svg('g',{'data-node':i,class:'node',role:'button',tabindex:0,'aria-label':'Вершина '+(i+1)},root);if(i===listen)svg('circle',{cx:x,cy:y,r:26,fill:'none',stroke:'#ffb676','stroke-width':3},g);svg('circle',{cx:x,cy:y,r:18,fill:i===strike?'#79e3ba':'#94b5c5',stroke:i===chosen?'#fff':'#192b34','stroke-width':i===chosen?4:2},g);svg('text',{x,y:y+5,'text-anchor':'middle'},g,i+1);g.addEventListener('keydown',evt=>{if(evt.key==='Enter'||evt.key===' '){evt.preventDefault();nodeClick(i);}});});$('graphInfo').textContent=`${points.length} вершин, ${edges.length} рёбер · вход ${strike+1}, выход ${listen+1}`;$('undo').disabled=!history.length;}
+function nodeClick(i){if(tool==='strike'){strike=i;invalidate();}else if(tool==='listen'){listen=i;invalidate();}else if(chosen===null){chosen=i;}else if(chosen===i){chosen=null;}else{commit();let k=edges.findIndex(([a,b])=>a===chosen&&b===i||a===i&&b===chosen);if(k<0)edges.push([chosen,i]);else edges.splice(k,1);chosen=null;invalidate();}drawGraph();}
+$('graph').addEventListener('click',evt=>{let el=evt.target.closest('[data-node]');if(el){nodeClick(Number(el.dataset.node));return;}if(tool!=='edit'||points.length>=12)return;let pt=$('graph').createSVGPoint();pt.x=evt.clientX;pt.y=evt.clientY;let pos=pt.matrixTransform($('graph').getScreenCTM().inverse());commit();points.push([Math.max(25,Math.min(575,pos.x)),Math.max(25,Math.min(315,pos.y))]);chosen=null;drawGraph();invalidate();});
+$('graph').addEventListener('contextmenu',evt=>{evt.preventDefault();let el=evt.target.closest('[data-node]');if(!el||tool!=='edit')return;let i=+el.dataset.node;commit();points.splice(i,1);edges=edges.filter(([a,b])=>a!==i&&b!==i).map(([a,b])=>[a>i?a-1:a,b>i?b-1:b]);strike=Math.min(strike,points.length-1);listen=Math.min(listen,points.length-1);chosen=null;drawGraph();invalidate();});
+for(let name of ['edit','strike','listen'])$(name+'Mode').onclick=()=>{tool=name;chosen=null;for(let n of ['edit','strike','listen'])$(n+'Mode').classList.toggle('active',n===name);$('graphHint').textContent=name==='edit'?'Клик по пустому месту — новая вершина. Два клика по вершинам — соединить или убрать ребро. ПКМ — удалить.':name==='strike'?'Выбери вершину, на которую действует удар или входной аудиосигнал.':'Выбери вершину, смещение которой будет преобразовано в звук.';drawGraph();};
+$('undo').onclick=()=>{if(!history.length)return;({points,edges,strike,listen}=JSON.parse(history.pop()));chosen=null;drawGraph();invalidate();};
+$('clear').onclick=()=>{commit();points=[];edges=[];chosen=null;strike=listen=0;drawGraph();invalidate();};
+const ranges={alpha:v=>Number(v).toFixed(2),scale:v=>v+' Гц',damping:v=>Number(v).toFixed(2)+' с',drive:v=>Number(v).toFixed(1)+'×',wet:v=>v+'%',gain:v=>v+'%',impulse:v=>Number(v).toFixed(2)+'×'};
+for(let [id,format] of Object.entries(ranges)){let el=$(id);function update(){ $(id+'Val').textContent=format(el.value);invalidate();}el.addEventListener('input',update);$(id+'Val').textContent=format(el.value);}
+$('impulseMode').onclick=()=>{sourceMode='impulse';$('impulsePane').hidden=false;$('filePane').hidden=true;$('impulseMode').classList.add('active');$('fileMode').classList.remove('active');invalidate();};
+$('fileMode').onclick=()=>{sourceMode='file';$('impulsePane').hidden=true;$('filePane').hidden=false;$('fileMode').classList.add('active');$('impulseMode').classList.remove('active');invalidate();};
+function status(t){$('status').textContent=t;}
+function progress(t){$('progress').style.width=Math.max(0,Math.min(100,t*100))+'%';}
+function invalidate(){last=null;$('replay').disabled=$('save').disabled=true;}
+function stop(){if(playing){try{playing.stop();}catch{}playing.disconnect();playing=null;}}
+$('stop').onclick=()=>{job++;stop();status('Остановлено.');progress(0);};
+async function context(){if(!audioContext)audioContext=new (window.AudioContext||window.webkitAudioContext)();await audioContext.resume();return audioContext;}
+$('audioFile').onchange=async()=>{let f=$('audioFile').files[0];decoded=null;invalidate();if(!f)return;try{let ctx=await context();status('Декодирование файла…');decoded=await ctx.decodeAudioData(await f.arrayBuffer());$('fileInfo').textContent=`${f.name} · ${decoded.duration.toFixed(1)} с · ${decoded.numberOfChannels} канал(а). Обрабатываем целиком, моно.`;status('Файл загружен. Можно рассчитывать.');}catch(e){status('Ошибка декодирования: '+e.message);}};
+const RATE=22050;
+function readAudio(input,rate){let count=Math.ceil(input.duration*rate);let out=new Float32Array(count),channels=Array.from({length:Math.min(2,input.numberOfChannels)},(_,i)=>input.getChannelData(i)),step=input.sampleRate/rate;for(let s=0;s<count;s++){let p=s*step,i=Math.floor(p),frac=p-i,value=0;for(let c of channels){let a=c[Math.min(i,c.length-1)],b=c[Math.min(i+1,c.length-1)];value+=a+(b-a)*frac;}out[s]=value/channels.length;}return out;}
+function captureParams(){return{edges:edges.map(e=>e.slice()),n:points.length,strike,listen,alpha:+$('alpha').value,scale:+$('scale').value,tau:+$('damping').value,drive:+$('drive').value,impulse:+$('impulse').value,wet:+$('wet').value/100,gain:+$('gain').value/100,mode:sourceMode};}
+async function simulate(p,input,token){let N=p.n,frames=input?input.length:Math.floor(RATE*Math.min(6,Math.max(1.5,5*p.tau))),out=new Float32Array(frames);let q=new Float64Array(N),v=new Float64Array(N),forces=new Float64Array(N),omega=2*Math.PI*p.scale,omega2=omega*omega,damp=2/p.tau;const sub=3,dt=1/(RATE*sub),kappa=p.alpha/(.005*.005),driveAccel=omega2*.004*p.drive; if(!input)v[p.strike]=omega*p.impulse*.008;
+ function acceleration(sample){for(let i=0;i<N;i++)forces[i]=-omega2*.01*q[i]-damp*v[i];for(let [i,j,k] of p.edges){let d=q[i]-q[j],f=omega2*(k||1)*(d+kappa*d*d*d);forces[i]-=f;forces[j]+=f;}if(input)forces[p.strike]+=driveAccel*sample;}
+ // Semi-implicit velocity step; damping is evaluated using updated velocity for stability.
+ for(let n=0;n<frames;n++){
+  let sample=input?input[n]:0;
+  for(let s=0;s<sub;s++){
+   acceleration(sample);
+   for(let i=0;i<N;i++){v[i]+=dt*forces[i];q[i]+=dt*v[i];}
+  }
+  let z=q[p.listen];if(!Number.isFinite(z)||Math.abs(z)>1e5)throw new Error('Численная неустойчивость: уменьшите α, частотный масштаб или силу входного сигнала.');
+  out[n]=z;
+  if(n%4096===0){if(token!==job)throw new Error('Прервано');if(n%32768===0){progress(.8*n/frames);await new Promise(resolve=>setTimeout(resolve,0));}}
+ }
+ return out;
+}
+function combine(p,wet,dry){
+ let n=wet.length,out=new Float32Array(n),peak=0,makeup=1;
+ if(dry){
+  let dryPower=0,wetPower=0;
+  for(let i=0;i<n;i++){dryPower+=dry[i]*dry[i];wetPower+=wet[i]*wet[i];}
+  const dryRms=Math.sqrt(dryPower/Math.max(1,n)),wetRms=Math.sqrt(wetPower/Math.max(1,n));
+  makeup=wetRms>1e-9&&dryRms>1e-9?Math.min(10000,dryRms/wetRms):0;
+ }else{
+  for(let i=0;i<n;i++)peak=Math.max(peak,Math.abs(wet[i]));
+  makeup=peak>1e-9?.7/peak:0;
+ }
+ peak=0;
+ for(let i=0;i<n;i++){
+  let w=wet[i]*makeup*p.gain,d=dry?dry[i]:0;
+  let y=dry?(1-p.wet)*d+p.wet*w:w;
+  if(!Number.isFinite(y))throw Error('Нечисловой результат');
+  out[i]=y;peak=Math.max(peak,Math.abs(y));
+ }
+ if(peak>1){let factor=.98/peak;for(let i=0;i<n;i++)out[i]*=factor;}
+ return{audio:out,makeup};
+}
+function playback(buffer){stop();let ctx=audioContext;let b=ctx.createBuffer(1,buffer.length,RATE);b.copyToChannel(buffer,0);let src=ctx.createBufferSource();src.buffer=b;src.connect(ctx.destination);src.onended=()=>{if(playing===src)playing=null;};src.start();playing=src;}
+$('render').onclick=async()=>{let token=++job;stop();invalidate();if(!points.length){status('Сначала добавь вершины.');return;}try{let ctx=await context(),p=captureParams();if(p.mode==='file'&&!decoded)throw Error('Выберите аудиофайл.');let input=p.mode==='file'?readAudio(decoded,RATE):null;status('Расчёт нелинейных колебаний…');progress(0);let wet=await simulate(p,input,token);if(token!==job)return;let result=combine(p,wet,input),mixed=result.audio;last={buffer:mixed,wet,input,p};progress(1);status(`Готово: ${(mixed.length/RATE).toFixed(2)} с · ${p.n} вершин · α = ${p.alpha}. ${p.mode==='file'?`Обработана вся запись. Автовыравнивание wet ×${result.makeup.toFixed(1)}.`:'Отклик на удар.'}`);$('replay').disabled=$('save').disabled=false;drawPlots(mixed);playback(mixed);}catch(e){if(token===job){status('Ошибка: '+e.message);progress(0);}}};
+$('replay').onclick=async()=>{if(!last)return;await context();playback(last.buffer);};
+function wav(samples){let b=new ArrayBuffer(44+samples.length*2),d=new DataView(b);function str(i,s){for(let j=0;j<s.length;j++)d.setUint8(i+j,s.charCodeAt(j));}str(0,'RIFF');d.setUint32(4,36+samples.length*2,true);str(8,'WAVE');str(12,'fmt ');d.setUint32(16,16,true);d.setUint16(20,1,true);d.setUint16(22,1,true);d.setUint32(24,RATE,true);d.setUint32(28,RATE*2,true);d.setUint16(32,2,true);d.setUint16(34,16,true);str(36,'data');d.setUint32(40,samples.length*2,true);for(let i=0;i<samples.length;i++)d.setInt16(44+2*i,Math.round(Math.max(-1,Math.min(1,samples[i]))*32767),true);return new Blob([b],{type:'audio/wav'});}
+$('save').onclick=()=>{if(!last)return;let url=URL.createObjectURL(wav(last.buffer)),a=document.createElement('a');a.href=url;a.download=`cubic-graph-${sourceMode}-${Date.now()}.wav`;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),3000);};
+function canvasGrid(ctx,w,h){ctx.fillStyle='#101e28';ctx.fillRect(0,0,w,h);ctx.strokeStyle='#304553';ctx.lineWidth=1;for(let i=1;i<5;i++){let y=h*i/5;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke();}}
+function fft(re,im){let n=re.length;for(let i=1,j=0;i<n;i++){let bit=n>>1;for(;j&bit;bit>>=1)j^=bit;j^=bit;if(i<j){[re[i],re[j]]=[re[j],re[i]];[im[i],im[j]]=[im[j],im[i]];}}for(let len=2;len<=n;len<<=1){let angle=-2*Math.PI/len,wr=Math.cos(angle),wi=Math.sin(angle);for(let i=0;i<n;i+=len){let cr=1,ci=0;for(let j=0;j<len/2;j++){let k=i+j,l=k+len/2,vr=re[l]*cr-im[l]*ci,vi=re[l]*ci+im[l]*cr;re[l]=re[k]-vr;im[l]=im[k]-vi;re[k]+=vr;im[k]+=vi;let next=cr*wr-ci*wi;ci=cr*wi+ci*wr;cr=next;}}}}
+function drawPlots(data){let c=$('wave'),ctx=c.getContext('2d'),w=c.width,h=c.height;canvasGrid(ctx,w,h);ctx.strokeStyle='#79e3ba';ctx.lineWidth=2;ctx.beginPath();let span=Math.min(data.length,Math.floor(.2*RATE));for(let x=0;x<w;x++){let k=Math.min(data.length-1,Math.floor((x/w)*span));let y=h/2-data[k]*h*.43;if(x===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);}ctx.stroke();ctx.fillStyle='#a8c5d1';ctx.font='17px system-ui';ctx.fillText(`Первые ${(span/RATE).toFixed(2)} с`,16,25);
+ c=$('spectrum');ctx=c.getContext('2d');w=c.width;h=c.height;canvasGrid(ctx,w,h);const count=4096,start=Math.min(Math.max(0,Math.floor(data.length*.25)),Math.max(0,data.length-count));let re=new Float64Array(count),im=new Float64Array(count);for(let i=0;i<count;i++)re[i]=(data[start+i]||0)*(.5-.5*Math.cos(2*Math.PI*i/(count-1)));fft(re,im);let maxHz=3000,cols=230,amps=new Float64Array(cols),max=1e-10;for(let k=1;k<count/2;k++){let hz=k*RATE/count;if(hz>maxHz)break;let col=Math.min(cols-1,Math.floor(hz/maxHz*cols)),mag=Math.hypot(re[k],im[k]);amps[col]=Math.max(amps[col],mag);max=Math.max(max,amps[col]);}ctx.fillStyle='#ffb676';for(let i=0;i<cols;i++){let val=Math.sqrt(amps[i]/max),height=val*(h-35);ctx.fillRect(i*w/cols,h-22-height,w/cols+1,height);}ctx.fillStyle='#a8c5d1';ctx.font='16px system-ui';for(let hz=0;hz<=3000;hz+=500)ctx.fillText(hz+' Гц',Math.min(w-68,Math.max(0,hz/maxHz*w)),h-5);}
+function initPlots(){for(let id of ['wave','spectrum']){let c=$(id),ctx=c.getContext('2d');canvasGrid(ctx,c.width,c.height);ctx.fillStyle='#a8c5d1';ctx.font='20px system-ui';ctx.fillText('Рассчитай звук, чтобы увидеть сигнал',20,c.height/2);}}
+drawGraph();initPlots();
+</script></body></html>

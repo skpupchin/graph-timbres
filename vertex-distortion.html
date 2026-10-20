@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Искажение на вершинах · линейный граф</title>
+<style>
+:root{color-scheme:dark;--bg:#0d141b;--panel:#17242e;--edge:#304553;--ink:#e9f3f6;--sub:#aec1cb;--accent:#79e3ba;--hot:#ffb676}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,Arial,sans-serif}main{max-width:1160px;margin:auto;padding:24px 16px 70px}header{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:18px}h1{font-size:clamp(22px,4vw,32px);margin:0}h2{font-size:18px;margin:0 0 12px}.sub{color:var(--sub);font-size:13px}.layout{display:grid;grid-template-columns:370px minmax(0,1fr);gap:16px}.panel{background:var(--panel);border:1px solid var(--edge);border-radius:14px;padding:18px}.stack{display:grid;gap:16px}.group{border-top:1px solid var(--edge);padding-top:12px}.group:first-child{border-top:0;padding-top:0}label{display:block;margin-bottom:4px;color:var(--sub);font-size:13px}.rangeHead{display:flex;justify-content:space-between;gap:10px}output{color:var(--accent);font-variant-numeric:tabular-nums}input[type=range]{width:100%;accent-color:var(--accent)}input[type=file]{max-width:100%;font-size:13px}button,select{font:inherit;cursor:pointer;background:#101e28;color:var(--ink);border:1px solid var(--edge);border-radius:8px;padding:9px 11px}button:hover{border-color:var(--accent)}button:disabled{opacity:.4;cursor:default}button.active,button.primary{color:#072218;background:var(--accent);border-color:var(--accent);font-weight:700}button.hot{color:#2c1607;background:var(--hot);border-color:var(--hot)}.row{display:flex;flex-wrap:wrap;gap:7px}.row>*{flex:1}.row.tiny button{font-size:13px}select{width:100%}#graph{width:100%;height:auto;aspect-ratio:600/340;display:block;touch-action:none;background:#101e28;border:1px solid var(--edge);border-radius:10px}.node{cursor:pointer}.node text{pointer-events:none;fill:#081719;font-weight:700}.edge{stroke:#627d8a;stroke-linecap:round}canvas{width:100%;height:150px;background:#101e28;border:1px solid var(--edge);border-radius:8px}.bar{height:7px;background:#304553;border-radius:7px;overflow:hidden;margin:8px 0}.bar>div{width:0%;height:100%;background:var(--accent)}#status{min-height:42px;color:var(--accent);font-size:13px;white-space:pre-line}.textSmall{font-size:12px;color:var(--sub)}details{margin-top:10px}summary{cursor:pointer}code{color:var(--accent)}@media(max-width:800px){.layout{grid-template-columns:1fr}}@media(max-width:430px){.panel{padding:13px}}
+.edgeProp{display:grid;grid-template-columns:54px minmax(0,1fr) 68px;align-items:center;gap:8px;margin:8px 0;color:var(--sub);font-size:13px}.edgeProp input[type=range]{min-width:0}.edgeProp input[type=number]{width:68px;background:#101e28;border:1px solid var(--edge);border-radius:7px;color:var(--ink);padding:6px}.edgeProp input:disabled{opacity:.55}[hidden]{display:none!important}button:focus-visible,input:focus-visible,summary:focus-visible,#graph:focus-visible{outline:2px solid var(--hot);outline-offset:2px}
+.formula,.math{font-family:"Cambria Math","STIX Two Math","Latin Modern Math",Georgia,serif;font-style:normal}.formula{color:var(--accent);font-size:clamp(17px,2vw,21px);line-height:1.6;overflow-x:auto;white-space:nowrap;margin:12px 0}.math{font-size:1.08em;color:var(--accent)}
+.parameterHelp{display:grid;grid-template-columns:minmax(130px,190px) minmax(0,1fr);gap:10px 18px;margin:0}.parameterHelp dt{font-weight:700;color:var(--accent)}.parameterHelp dd{margin:0;color:var(--sub)}@media(max-width:520px){.parameterHelp{grid-template-columns:1fr;gap:2px}.parameterHelp dd{margin-bottom:10px}}
+</style></head>
+<body><main><header><h1>Искажение на вершинах графа</h1></header>
+<div class="layout">
+<section class="panel stack">
+ <div class="group"><div class="row tiny"><button id="editMode" class="active">Редактировать</button><button id="hearMode">Слушать</button></div><p class="textSmall" id="graphHint">Клик по фону — вершина. Два клика по вершинам — ребро. Потяни вершину ЛКМ, чтобы переместить; ПКМ — удалить. Максимум 12 вершин.</p><svg id="graph" viewBox="0 0 600 340" role="group" tabindex="0" aria-label="Редактор графа"></svg><div class="row tiny" style="margin-top:9px"><button id="undo">Отменить</button><button id="clear">Очистить</button></div><div class="sub" id="graphInfo"></div><details id="edgeProps"><summary>Жёсткости рёбер</summary><div id="edgeRows"></div></details></div>
+ <div class="group"><h2>Параметры</h2>
+  <div class="rangeHead"><label for="drive">Drive · искажение на вершинах</label><output id="driveVal"></output></div><input type="range" id="drive" min="0" max="12" step="0.25" value="4">
+  <div class="rangeHead"><label for="width">Ширина считывания</label><output id="widthVal"></output></div><input type="range" id="width" min="0" max="100" step="1" value="50">
+ <div class="rangeHead"><label for="scale">Частотный масштаб</label><output id="scaleVal"></output></div><input type="range" id="scale" min="50" max="350" step="10" value="180">
+ <div class="rangeHead"><label for="damping">Затухание τ</label><output id="dampingVal"></output></div><input type="range" id="damping" min="0.15" max="3" step="0.05" value="0.9">
+ <div class="rangeHead"><label for="wet">Dry / Wet</label><output id="wetVal"></output></div><input type="range" id="wet" min="0" max="100" step="5" value="85">
+ <div class="rangeHead"><label for="gain">Громкость wet после выравнивания</label><output id="gainVal"></output></div><input type="range" id="gain" min="0" max="300" step="10" value="100">
+ </div>
+ <div class="group"><h2>Источник звука</h2><div class="row"><button id="impulseMode" class="active">Удар</button><button id="fileMode">Аудиотрек</button></div>
+ <div id="impulsePane"><div class="rangeHead"><label for="impulse">Сила удара</label><output id="impulseVal"></output></div><input id="impulse" type="range" min="0.05" max="3" step="0.05" value="1"></div>
+ <div id="filePane" hidden><label for="audioFile">Выбрать аудиофайл с устройства</label><input id="audioFile" type="file" accept="audio/*,.wav,.mp3,.ogg,.m4a,.flac"><p class="textSmall" id="fileInfo">Весь файл обрабатывается локально (22 050 Гц, моно), без ограничения длительности. Длинная запись потребует больше памяти и времени.</p></div></div>
+ <div class="group"><div class="row"><button id="render" class="primary">Рассчитать и слушать</button><button id="stop">Стоп</button></div><div class="row" style="margin-top:7px"><button id="replay" disabled>Снова</button><button id="save" disabled>Скачать WAV</button></div><div class="bar"><div id="progress"></div></div><div id="status" role="status" aria-live="polite">Готово. Выбери входную и выходную вершины.</div></div>
+</section>
+ <div class="stack"><section class="panel"><h2>Результат</h2><p class="sub">Осциллограмма выходного звука</p><canvas id="wave" width="900" height="230"></canvas><p class="sub" style="margin-top:15px">Спектр выходного звука · фрагмент записи</p><canvas id="spectrum" width="900" height="230"></canvas></section>
+ <section class="panel"><h2>Математическая модель</h2><p>Масса каждой вершины равна 1. Рёбра — линейные пружины.</p>
+  <p class="formula">q̈ + γq̇ + ω₀<sup>2</sup>(L + εI)q = b x(t)</p>
+  <p class="formula">z<sub>i</sub> = F<sub>g</sub>(q<sub>i</sub>), y = ∑<sub>i</sub> c<sub>i</sub>z<sub>i</sub></p>
+ </section>
+ <section class="panel"><h2>На что влияют параметры</h2>
+ <dl class="parameterHelp">
+  <dt>Жёсткость ребра</dt><dd>Меняет связь между двумя вершинами, а значит резонансные частоты и распределение колебаний по графу. Положение и длина нарисованного ребра на звук не влияют.</dd>
+  <dt>Входная вершина</dt><dd>Определяет, куда подаётся аудиосигнал или начальный удар. Для записи входная сила имеет постоянный масштаб, выбранный для слышимых смещений.</dd>
+  <dt>Центр считывания</dt><dd>Задаёт вершину с наибольшим весом в выходном сигнале. Вес остальных вершин убывает с числом рёбер до центра.</dd>
+  <dt>Drive</dt><dd>Управляет мягким ограничением смещения отдельно на каждой вершине: <span class="math">F<sub>0</sub>(q) = q</span>, при Drive &gt; 0 — <span class="math">F<sub>g</sub>(q) = (d₀/g) tanh(gq/d₀)</span>, где <span class="math">d₀ = 0.003</span>. При 0 отклик линейный; при увеличении Drive появляются гармоники и интермодуляция.</dd>
+  <dt>Ширина считывания</dt><dd>При 0% звучит только центр, при 100% все вершины имеют равный вес. Между этими значениями веса <span class="math">c<sub>i</sub></span> экспоненциально убывают с расстоянием по рёбрам и в сумме равны 1. Отдельные вершины не нормируются.</dd>
+  <dt>Частотный масштаб</dt><dd>Задаёт общий масштаб резонансных частот <span class="math">a</span> через <span class="math">ω₀ = 2πa</span>.</dd>
+  <dt>Затухание τ</dt><dd>Определяет, как быстро гаснут колебания: чем больше <span class="math">τ</span>, тем дольше звучит отклик. В уравнении <span class="math">γ = 2/τ</span>; слабое закрепление вершин <span class="math">ε = 0.01</span> постоянно.</dd>
+  <dt>Сила удара</dt><dd>Масштабирует начальную скорость выбранной вершины. В режиме удара внешняя сила не подаётся.</dd>
+  <dt>Dry / Wet</dt><dd>Смешивает исходный файл и обработанный сигнал: 0% — только исходник, 100% — только обработка. Для файла общий wet-сигнал сначала выравнивается по среднеквадратичной громкости исходника.</dd>
+  <dt>Громкость wet</dt><dd>Дополнительно усиливает или ослабляет обработанный сигнал после выравнивания и перед смешиванием.</dd>
+ </dl></section></div></div></main>
+<script>
+'use strict';
+
+const RATE=22050, PINNING=.01, SHAPE_SCALE=.003, FORCE_DISPLACEMENT=.004;
+const $=id=>document.getElementById(id), NS='http://www.w3.org/2000/svg';
+
+function edgeWeight(edge){
+  const weight=edge.length>2?edge[2]:1;
+  if(!Number.isFinite(weight)||weight<=0)throw new RangeError('Жёсткость ребра должна быть больше нуля.');
+  return weight;
+}
+function laplacian(n,edges){
+  const L=Array.from({length:n},()=>Array(n).fill(0));
+  for(const edge of edges){
+    const [i,j]=edge,w=edgeWeight(edge);
+    if(!Number.isInteger(i)||!Number.isInteger(j)||i<0||j<0||i>=n||j>=n||i===j)throw new RangeError('Некорректное ребро.');
+    L[i][i]+=w;L[j][j]+=w;L[i][j]-=w;L[j][i]-=w;
+  }
+  return L;
+}
+// The same Jacobi diagonalisation used for the symmetric Laplacian in graph-timbres.html.
+function eigen(L){
+  const n=L.length,A=L.map(row=>row.slice()),V=Array.from({length:n},(_,i)=>Array.from({length:n},(_,j)=>+(i===j)));
+  for(let iteration=0;iteration<100*n*n;iteration++){
+    let p=0,q=1,maximum=0;
+    for(let i=0;i<n;i++)for(let j=i+1;j<n;j++)if(Math.abs(A[i][j])>maximum){maximum=Math.abs(A[i][j]);p=i;q=j;}
+    if(maximum<1e-12)break;
+    const angle=.5*Math.atan2(2*A[p][q],A[q][q]-A[p][p]),c=Math.cos(angle),s=Math.sin(angle);
+    const app=A[p][p],aqq=A[q][q],apq=A[p][q];
+    for(let k=0;k<n;k++)if(k!==p&&k!==q){const x=A[k][p],y=A[k][q];A[k][p]=A[p][k]=c*x-s*y;A[k][q]=A[q][k]=s*x+c*y;}
+    A[p][p]=c*c*app-2*s*c*apq+s*s*aqq;A[q][q]=s*s*app+2*s*c*apq+c*c*aqq;A[p][q]=A[q][p]=0;
+    for(let k=0;k<n;k++){const x=V[k][p],y=V[k][q];V[k][p]=c*x-s*y;V[k][q]=s*x+c*y;}
+  }
+  return Array.from({length:n},(_,k)=>({lambda:Math.max(0,A[k][k]),v:V.map(row=>row[k])})).sort((a,b)=>a.lambda-b.lambda);
+}
+function readoutWeights(n,edges,center,width){
+  if(!Number.isInteger(center)||center<0||center>=n||n<1)throw new RangeError('Выберите центральную вершину.');
+  if(!Number.isFinite(width)||width<0||width>100)throw new RangeError('Ширина должна лежать от 0 до 100.');
+  if(width===0)return Array.from({length:n},(_,i)=>+(i===center));
+  if(width===100)return Array(n).fill(1/n);
+  const neighbours=Array.from({length:n},()=>[]);
+  for(const [i,j] of edges){neighbours[i].push(j);neighbours[j].push(i);}
+  const distance=Array(n).fill(Infinity),queue=[center];distance[center]=0;
+  for(let head=0;head<queue.length;head++)for(const j of neighbours[queue[head]])if(!Number.isFinite(distance[j])){distance[j]=distance[queue[head]]+1;queue.push(j);}
+  const sigma=width/(100-width),weights=distance.map(d=>Math.exp(-(Number.isFinite(d)?d:n+1)/sigma));
+  const sum=weights.reduce((a,b)=>a+b,0);return weights.map(w=>w/sum);
+}
+function softLimit(q,drive){return drive===0?q:SHAPE_SCALE/drive*Math.tanh(drive*q/SHAPE_SCALE);}
+function vertexReadout(q,weights,drive){let value=0;for(let i=0;i<q.length;i++)value+=weights[i]*softLimit(q[i],drive);return value;}
+function pooledReadout(q,weights,drive){let value=0;for(let i=0;i<q.length;i++)value+=weights[i]*q[i];return softLimit(value,drive);}
+
+// Exact zero-order-hold step for each damped Laplacian mode. The shared modal state
+// reconstructs every q_i before any vertex is passed through tanh.
+function createLinearStepper(p){
+  if(!Number.isInteger(p.n)||p.n<1||p.n>12||p.strike<0||p.strike>=p.n||!(p.scale>0)||!(p.tau>0))throw new RangeError('Недопустимые параметры графа.');
+  const modes=eigen(laplacian(p.n,p.edges)),omega0=2*Math.PI*p.scale,alpha=1/p.tau,h=1/RATE,decay=Math.exp(-alpha*h);
+  const position=new Float64Array(p.n),velocity=new Float64Array(p.n),vectors=modes.map(mode=>mode.v);
+  const a11=new Float64Array(p.n),a12=new Float64Array(p.n),a21=new Float64Array(p.n),a22=new Float64Array(p.n),bq=new Float64Array(p.n),bv=new Float64Array(p.n);
+  for(let k=0;k<p.n;k++){
+    const frequency2=omega0*omega0*(modes[k].lambda+PINNING),damped2=frequency2-alpha*alpha;
+    let c,s;
+    if(damped2>1e-12){const w=Math.sqrt(damped2);c=Math.cos(w*h);s=Math.sin(w*h)/w;}
+    else if(damped2< -1e-12){const w=Math.sqrt(-damped2);c=Math.cosh(w*h);s=Math.sinh(w*h)/w;}
+    else{c=1;s=h;}
+    a11[k]=decay*(c+alpha*s);a12[k]=decay*s;
+    a21[k]=-decay*frequency2*s;a22[k]=decay*(c-alpha*s);
+    const force=omega0*omega0*FORCE_DISPLACEMENT*vectors[k][p.strike];
+    bq[k]=(1-a11[k])*force/frequency2;bv[k]=-a21[k]*force/frequency2;
+    if(p.mode==='impulse')velocity[k]=omega0*p.impulse*.008*vectors[k][p.strike];
+  }
+  return{
+    sample(input,q){
+      if(!Number.isFinite(input))throw new RangeError('Аудиофайл содержит некорректный сэмпл.');
+      q.fill(0);
+      for(let k=0;k<p.n;k++)for(let i=0;i<p.n;i++)q[i]+=vectors[k][i]*position[k];
+      for(let k=0;k<p.n;k++){
+        const oldQ=position[k],oldV=velocity[k];
+        position[k]=a11[k]*oldQ+a12[k]*oldV+bq[k]*input;
+        velocity[k]=a21[k]*oldQ+a22[k]*oldV+bv[k]*input;
+        if(!Number.isFinite(position[k])||!Number.isFinite(velocity[k]))throw new RangeError('Численная неустойчивость.');
+      }
+      return q;
+    }
+  };
+}
+function renderWet(p,input,frames){
+  const count=frames??(input?input.length:Math.ceil(RATE*Math.min(8,6*p.tau)));
+  const output=new Float32Array(count),stepper=createLinearStepper(p),q=new Float64Array(p.n),weights=readoutWeights(p.n,p.edges,p.listen,p.width);
+  for(let n=0;n<count;n++)output[n]=vertexReadout(stepper.sample(input&&n<input.length?input[n]:0,q),weights,p.drive);
+  return output;
+}
+function combine(p,wet,dry){
+  const output=new Float32Array(wet.length);let makeup=1;
+  if(dry){
+    let dryPower=0,wetPower=0;
+    for(let i=0;i<dry.length;i++){dryPower+=dry[i]*dry[i];wetPower+=wet[i]*wet[i];}
+    const dryRms=Math.sqrt(dryPower/Math.max(1,dry.length)),wetRms=Math.sqrt(wetPower/Math.max(1,dry.length));
+    makeup=dryRms>1e-9&&wetRms>1e-12?Math.min(50000,dryRms/wetRms):0;
+  }else makeup=80;
+  let peak=0;
+  for(let i=0;i<output.length;i++){
+    const wetSample=wet[i]*makeup*p.gain,drySample=dry&&i<dry.length?dry[i]:0;
+    const value=dry?(1-p.wet)*drySample+p.wet*wetSample:wetSample;
+    if(!Number.isFinite(value))throw new RangeError('Некорректный выходной сигнал.');
+    output[i]=value;peak=Math.max(peak,Math.abs(value));
+  }
+  if(peak>.98){const factor=.98/peak;for(let i=0;i<output.length;i++)output[i]*=factor;}
+  return{audio:output,makeup};
+}
+function wav(samples){
+  const size=44+samples.length*2;if(size>0xffffffff)throw new RangeError('Файл слишком длинный для 16-битного WAV.');
+  const bytes=new ArrayBuffer(size),view=new DataView(bytes);
+  function write(at,value){for(let i=0;i<value.length;i++)view.setUint8(at+i,value.charCodeAt(i));}
+  write(0,'RIFF');view.setUint32(4,size-8,true);write(8,'WAVE');write(12,'fmt ');view.setUint32(16,16,true);view.setUint16(20,1,true);view.setUint16(22,1,true);view.setUint32(24,RATE,true);view.setUint32(28,RATE*2,true);view.setUint16(32,2,true);view.setUint16(34,16,true);write(36,'data');view.setUint32(40,size-44,true);
+  for(let i=0;i<samples.length;i++)view.setInt16(44+2*i,Math.round(Math.max(-1,Math.min(1,samples[i]))*32767),true);
+  return new Blob([bytes],{type:'audio/wav'});
+}
+if(typeof module!=='undefined')module.exports={RATE,SHAPE_SCALE,laplacian,eigen,readoutWeights,softLimit,vertexReadout,pooledReadout,createLinearStepper,renderWet,combine,wav};
+
+if(typeof document!=='undefined'){
+let points=[[100,160],[240,90],[370,160],[500,235]],edges=[[0,1,1],[1,2,1],[2,3,1],[0,2,1]];
+let strike=0,listen=2,tool='edit',chosen=null,history=[],sourceMode='impulse',audioContext=null,decoded=null,playing=null,last=null,job=0;
+function snapshot(){return JSON.stringify({points,edges,strike,listen});}
+function commit(){history.push(snapshot());if(history.length>60)history.shift();}
+function svg(tag,attrs,parent,text){const element=document.createElementNS(NS,tag);for(const [key,value] of Object.entries(attrs))element.setAttribute(key,value);if(text!=null)element.textContent=text;parent.append(element);return element;}
+function drawEdgeProps(){
+  const root=$('edgeRows');root.replaceChildren();$('edgeProps').hidden=!edges.length;
+  edges.forEach((edge,index)=>{
+    const row=document.createElement('div'),name=document.createElement('span'),slider=document.createElement('input'),input=document.createElement('input');
+    const label=`Жёсткость ребра ${edge[0]+1} — ${edge[1]+1}`;
+    row.className='edgeProp';name.textContent=`${edge[0]+1} ↔ ${edge[1]+1}`;
+    slider.type='range';slider.min=String(Math.min(.1,edgeWeight(edge)));slider.max=String(Math.max(10,edgeWeight(edge)));slider.step='.05';slider.value=String(edgeWeight(edge));slider.disabled=tool!=='edit';slider.setAttribute('aria-label',label);
+    input.type='number';input.step='any';input.min='0';input.value=String(edgeWeight(edge));input.disabled=tool!=='edit';input.setAttribute('aria-label',`${label}, точное значение`);
+    let before=null;
+    slider.oninput=()=>{
+      if(before===null)before=snapshot();
+      const weight=Number(slider.value);edges[index]=[edge[0],edge[1],weight];input.value=String(weight);
+      invalidate();drawGraph(false);status('Жёсткость изменена. Рассчитай звук заново.');
+    };
+    slider.onchange=()=>{
+      if(before!==null&&before!==snapshot()){history.push(before);if(history.length>60)history.shift();$('undo').disabled=false;}
+      before=null;
+    };
+    input.onchange=()=>{
+      const weight=input.valueAsNumber;
+      if(!Number.isFinite(weight)||weight<=0){input.value=String(edgeWeight(edges[index]));status('Жёсткость должна быть больше нуля.');return;}
+      if(weight===edgeWeight(edges[index]))return;
+      commit();edges[index]=[edge[0],edge[1],weight];invalidate();drawGraph();status('Жёсткость изменена. Рассчитай звук заново.');
+    };
+    row.append(name,slider,input);root.append(row);
+  });
+}
+function drawGraph(refreshEdgeProps=true){
+  const root=$('graph'),weights=points.length?readoutWeights(points.length,edges,listen,+$('width').value):[];
+  root.replaceChildren();const maxWeight=Math.max(1,...edges.map(edgeWeight));
+  edges.forEach(edge=>{const [i,j]=edge,a=points[i],b=points[j];const line=svg('line',{x1:a[0],y1:a[1],x2:b[0],y2:b[1],class:'edge','stroke-width':2+3*Math.sqrt(edgeWeight(edge)/maxWeight)},root);svg('title',{},line,`Жёсткость ${edgeWeight(edge)}`);});
+  points.forEach(([x,y],i)=>{
+    const group=svg('g',{'data-node':i,class:'node',role:'button',tabindex:0,'aria-label':'Вершина '+(i+1)},root);
+    if(i===listen)svg('circle',{cx:x,cy:y,r:26,fill:'none',stroke:'#ffb676','stroke-width':3},group);
+    if(weights[i]>.01)svg('circle',{cx:x,cy:y,r:21+4*weights[i],fill:'none',stroke:'#ffb676','stroke-opacity':Math.min(.8,.15+weights[i]),'stroke-width':2},group);
+    svg('circle',{cx:x,cy:y,r:18,fill:i===strike?'#79e3ba':'#94b5c5',stroke:i===chosen?'#fff':'#192b34','stroke-width':i===chosen?4:2},group);
+    svg('text',{x,y:y+5,'text-anchor':'middle'},group,i+1);
+    group.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();nodeClick(i);}});
+  });
+  $('graphInfo').textContent=`${points.length} вершин, ${edges.length} рёбер · вход ${points.length?strike+1:'—'}, центр ${points.length?listen+1:'—'}`;
+  $('undo').disabled=!history.length;if(refreshEdgeProps)drawEdgeProps();
+}
+function nodeClick(i){
+  if(tool==='hear'){strike=i;invalidate();}
+  else if(chosen===null)chosen=i;
+  else if(chosen===i)chosen=null;
+  else{commit();const index=edges.findIndex(([a,b])=>a===chosen&&b===i||a===i&&b===chosen);if(index<0)edges.push([chosen,i,1]);else edges.splice(index,1);chosen=null;invalidate();}
+  drawGraph();
+  if(tool==='hear')playImpulseOnSelection();
+}
+function playImpulseOnSelection(){if(sourceMode==='impulse')void $('render').onclick();}
+$('graph').addEventListener('keydown',event=>{
+  if(tool==='hear'&&event.key==='ContextMenu'){
+    const node=event.target.closest('[data-node]');if(node){event.preventDefault();listen=+node.dataset.node;invalidate();drawGraph();playImpulseOnSelection();}
+  }
+});
+function graphPoint(event){
+  const point=$('graph').createSVGPoint();point.x=event.clientX;point.y=event.clientY;
+  const position=point.matrixTransform($('graph').getScreenCTM().inverse());
+  return[Math.max(25,Math.min(575,position.x)),Math.max(25,Math.min(315,position.y))];
+}
+let drag=null;
+$('graph').addEventListener('pointerdown',event=>{
+  if(event.button!==0)return;
+  const node=event.target.closest('[data-node]'),index=node?+node.dataset.node:null;
+  drag={id:event.pointerId,index,start:graphPoint(event),before:snapshot(),moved:false};
+  $('graph').setPointerCapture(event.pointerId);
+});
+$('graph').addEventListener('pointermove',event=>{
+  if(!drag||drag.id!==event.pointerId||tool!=='edit'||drag.index===null)return;
+  const position=graphPoint(event);
+  if(Math.hypot(position[0]-drag.start[0],position[1]-drag.start[1])>4)drag.moved=true;
+  if(drag.moved){points[drag.index]=position;drawGraph();}
+});
+$('graph').addEventListener('pointerup',event=>{
+  if(!drag||drag.id!==event.pointerId)return;
+  const current=drag;drag=null;
+  if(current.moved){history.push(current.before);if(history.length>60)history.shift();chosen=null;drawGraph();invalidate();}
+  else if(current.index!==null)nodeClick(current.index);
+  else if(tool==='edit'&&points.length<12){commit();points.push(graphPoint(event));chosen=null;drawGraph();invalidate();}
+});
+$('graph').addEventListener('pointercancel',event=>{
+  if(!drag||drag.id!==event.pointerId)return;
+  if(drag.moved){({points,edges,strike,listen}=JSON.parse(drag.before));drawGraph();}
+  drag=null;
+});
+$('graph').addEventListener('contextmenu',event=>{
+  event.preventDefault();const node=event.target.closest('[data-node]');if(!node)return;
+  if(tool==='hear'){listen=+node.dataset.node;invalidate();drawGraph();playImpulseOnSelection();return;}
+  const removed=+node.dataset.node;commit();points.splice(removed,1);
+  edges=edges.filter(([a,b])=>a!==removed&&b!==removed).map(edge=>[edge[0]>removed?edge[0]-1:edge[0],edge[1]>removed?edge[1]-1:edge[1],edgeWeight(edge)]);
+  strike=Math.max(0,Math.min(strike-(strike>removed?1:0),points.length-1));
+  listen=Math.max(0,Math.min(listen-(listen>removed?1:0),points.length-1));
+  chosen=null;drawGraph();invalidate();
+});
+for(const name of ['edit','hear'])$(name+'Mode').onclick=()=>{
+  tool=name;chosen=null;for(const option of ['edit','hear'])$(option+'Mode').classList.toggle('active',option===name);
+  $('graphHint').textContent=name==='edit'?'Клик по фону — вершина. Два клика по вершинам — ребро. Потяни вершину ЛКМ, чтобы переместить; ПКМ — удалить. Максимум 12 вершин.':'ЛКМ по вершине — подать удар или звук. ПКМ — выбрать центр считывания. В режиме «Удар» отклик проигрывается сразу.';drawGraph();
+};
+$('undo').onclick=()=>{if(!history.length)return;({points,edges,strike,listen}=JSON.parse(history.pop()));chosen=null;drawGraph();invalidate();};
+$('clear').onclick=()=>{commit();points=[];edges=[];chosen=null;strike=listen=0;drawGraph();invalidate();};
+const ranges={drive:v=>Number(v).toFixed(2),width:v=>v+'%',scale:v=>v+' Гц',damping:v=>Number(v).toFixed(2)+' с',wet:v=>v+'%',gain:v=>v+'%',impulse:v=>Number(v).toFixed(2)+'×'};
+for(const [id,format] of Object.entries(ranges)){
+  const element=$(id);$(id+'Val').textContent=format(element.value);
+  element.addEventListener('input',()=>{$(id+'Val').textContent=format(element.value);if(id==='width')drawGraph();invalidate();});
+}
+$('impulseMode').onclick=()=>{sourceMode='impulse';$('impulsePane').hidden=false;$('filePane').hidden=true;$('impulseMode').classList.add('active');$('fileMode').classList.remove('active');invalidate();};
+$('fileMode').onclick=()=>{sourceMode='file';$('impulsePane').hidden=true;$('filePane').hidden=false;$('fileMode').classList.add('active');$('impulseMode').classList.remove('active');invalidate();};
+function status(value){$('status').textContent=value;}
+function progress(value){$('progress').style.width=Math.max(0,Math.min(100,value*100))+'%';}
+function invalidate(){last=null;$('replay').disabled=$('save').disabled=true;}
+function stopAudio(){
+  if(!playing)return;const current=playing;playing=null;if(current.timer)clearTimeout(current.timer);
+  for(const source of current.sources){source.onended=null;try{source.stop();}catch{}source.disconnect();}
+}
+$('stop').onclick=()=>{job++;stopAudio();status('Остановлено.');progress(0);};
+async function context(){if(!audioContext)audioContext=new (window.AudioContext||window.webkitAudioContext)();await audioContext.resume();return audioContext;}
+$('audioFile').onchange=async()=>{
+  const file=$('audioFile').files[0];decoded=null;invalidate();if(!file)return;
+  try{const ctx=await context();status('Декодирование файла…');decoded=await ctx.decodeAudioData(await file.arrayBuffer());$('fileInfo').textContent=`${file.name} · ${decoded.duration.toFixed(1)} с · ${decoded.numberOfChannels} канал(а). Обрабатываем весь файл, моно.`;status('Файл загружен. Можно рассчитывать.');}
+  catch(error){status('Ошибка декодирования: '+error.message);}
+};
+function readAudio(input){
+  const count=Math.ceil(input.length*RATE/input.sampleRate),output=new Float32Array(count),channels=Array.from({length:input.numberOfChannels},(_,i)=>input.getChannelData(i)),step=input.sampleRate/RATE;
+  for(let sample=0;sample<count;sample++){
+    const position=sample*step,index=Math.min(input.length-1,Math.floor(position)),fraction=position-index;
+    let value=0;for(const channel of channels){const first=channel[index],next=channel[Math.min(index+1,channel.length-1)];value+=first+(next-first)*fraction;}
+    output[sample]=value/channels.length;
+  }
+  return output;
+}
+function captureParams(){return{n:points.length,edges:edges.map(edge=>edge.slice()),strike,listen,scale:+$('scale').value,tau:+$('damping').value,drive:+$('drive').value,width:+$('width').value,impulse:+$('impulse').value,wet:+$('wet').value/100,gain:+$('gain').value/100,mode:sourceMode};}
+async function simulate(p,input,frames,token){
+  const output=new Float32Array(frames),stepper=createLinearStepper(p),q=new Float64Array(p.n),weights=readoutWeights(p.n,p.edges,p.listen,p.width);
+  for(let n=0;n<frames;n++){
+    output[n]=vertexReadout(stepper.sample(input&&n<input.length?input[n]:0,q),weights,p.drive);
+    if(n%16384===0){if(token!==job)throw new Error('Прервано');progress(.85*n/frames);await new Promise(resolve=>setTimeout(resolve,0));}
+  }
+  return output;
+}
+function playback(samples){
+  stopAudio();const ctx=audioContext,current={samples,offset:0,nextAt:ctx.currentTime+.06,sources:new Set(),timer:null};playing=current;
+  function schedule(){
+    if(playing!==current)return;
+    while(current.offset<samples.length&&current.nextAt<ctx.currentTime+4){
+      const length=Math.min(RATE*2,samples.length-current.offset),buffer=ctx.createBuffer(1,length,RATE),source=ctx.createBufferSource();
+      buffer.copyToChannel(samples.subarray(current.offset,current.offset+length),0);source.buffer=buffer;source.connect(ctx.destination);
+      source.onended=()=>{source.disconnect();current.sources.delete(source);if(current.offset>=samples.length&&!current.sources.size&&playing===current)playing=null;};
+      current.sources.add(source);source.start(current.nextAt);current.nextAt+=length/RATE;current.offset+=length;
+    }
+    if(current.offset<samples.length)current.timer=setTimeout(schedule,500);
+  }
+  schedule();
+}
+$('render').onclick=async()=>{
+  const token=++job;stopAudio();invalidate();if(!points.length){status('Сначала добавь вершину.');return;}
+  try{
+    await context();const p=captureParams();if(p.mode==='file'&&!decoded)throw new Error('Выберите аудиофайл.');
+    const input=p.mode==='file'?readAudio(decoded):null,tail=Math.ceil(RATE*Math.min(8,6*p.tau)),frames=input?input.length+tail:tail;
+    status('Рассчитываем отклики вершин…');progress(0);
+    const wet=await simulate(p,input,frames,token);if(token!==job)return;
+    const result=combine(p,wet,input);if(token!==job)return;
+    last={buffer:result.audio,p};progress(1);drawPlots(result.audio,p.mode);
+    status('');
+    $('replay').disabled=$('save').disabled=false;playback(result.audio);
+  }catch(error){if(token===job){status('Ошибка: '+error.message);progress(0);}}
+};
+$('replay').onclick=async()=>{if(!last)return;await context();playback(last.buffer);};
+$('save').onclick=()=>{
+  if(!last)return;
+  try{const url=URL.createObjectURL(wav(last.buffer)),link=document.createElement('a');link.href=url;link.download=`vertex-distortion-${sourceMode}-${Date.now()}.wav`;document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);status('WAV скачан.');}
+  catch(error){status('Ошибка экспорта: '+error.message);}
+};
+function canvasGrid(ctx,width,height){ctx.fillStyle='#101e28';ctx.fillRect(0,0,width,height);ctx.strokeStyle='#304553';ctx.lineWidth=1;for(let i=1;i<5;i++){const y=height*i/5;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(width,y);ctx.stroke();}}
+function fft(re,im){
+  const n=re.length;for(let i=1,j=0;i<n;i++){let bit=n>>1;for(;j&bit;bit>>=1)j^=bit;j^=bit;if(i<j){[re[i],re[j]]=[re[j],re[i]];[im[i],im[j]]=[im[j],im[i]];}}
+  for(let length=2;length<=n;length<<=1){const angle=-2*Math.PI/length,wr=Math.cos(angle),wi=Math.sin(angle);for(let i=0;i<n;i+=length){let cr=1,ci=0;for(let j=0;j<length/2;j++){const k=i+j,l=k+length/2,vr=re[l]*cr-im[l]*ci,vi=re[l]*ci+im[l]*cr;re[l]=re[k]-vr;im[l]=im[k]-vi;re[k]+=vr;im[k]+=vi;const next=cr*wr-ci*wi;ci=cr*wi+ci*wr;cr=next;}}}
+}
+function strongestWindow(data,length){
+  if(data.length<=length)return 0;
+  let best=0,power=-1;const step=Math.max(1,Math.floor((data.length-length)/20));
+  for(let start=0;start+length<=data.length;start+=step){let sum=0;for(let n=start;n<start+length;n+=8)sum+=data[n]*data[n];if(sum>power){power=sum;best=start;}}
+  return best;
+}
+function drawPlots(data,mode){
+  const start=mode==='file'?strongestWindow(data,RATE):0,wave=$('wave'),ctx=wave.getContext('2d'),w=wave.width,h=wave.height;
+  canvasGrid(ctx,w,h);ctx.strokeStyle='#79e3ba';ctx.lineWidth=2;ctx.beginPath();
+  const span=Math.min(Math.floor(.2*RATE),data.length-start);for(let x=0;x<w;x++){const index=Math.min(data.length-1,start+Math.floor(x/w*span)),y=h/2-(data[index]||0)*h*.43;if(x===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);}ctx.stroke();ctx.fillStyle='#a8c5d1';ctx.font='17px system-ui';ctx.fillText(`Фрагмент ${(start/RATE).toFixed(2)}–${((start+span)/RATE).toFixed(2)} с`,16,25);
+  const spectrum=$('spectrum'),context2=spectrum.getContext('2d'),width=spectrum.width,height=spectrum.height;canvasGrid(context2,width,height);
+  const count=4096,offset=strongestWindow(data,count),re=new Float64Array(count),im=new Float64Array(count);
+  for(let i=0;i<count;i++)re[i]=(data[offset+i]||0)*(.5-.5*Math.cos(2*Math.PI*i/(count-1)));
+  fft(re,im);const maxHz=3000,columns=230,amplitudes=new Float64Array(columns);let max=1e-10;
+  for(let k=1;k<count/2;k++){const hz=k*RATE/count;if(hz>maxHz)break;const column=Math.min(columns-1,Math.floor(hz/maxHz*columns)),magnitude=Math.hypot(re[k],im[k]);amplitudes[column]=Math.max(amplitudes[column],magnitude);max=Math.max(max,amplitudes[column]);}
+  context2.fillStyle='#ffb676';for(let i=0;i<columns;i++){const level=Math.sqrt(amplitudes[i]/max),bar=level*(height-35);context2.fillRect(i*width/columns,height-22-bar,width/columns+1,bar);}
+  context2.fillStyle='#a8c5d1';context2.font='16px system-ui';for(let hz=0;hz<=3000;hz+=500)context2.fillText(hz+' Гц',Math.min(width-68,Math.max(0,hz/maxHz*width)),height-5);
+}
+function initPlots(){for(const id of ['wave','spectrum']){const canvas=$(id),ctx=canvas.getContext('2d');canvasGrid(ctx,canvas.width,canvas.height);ctx.fillStyle='#a8c5d1';ctx.font='20px system-ui';ctx.fillText('Рассчитай звук, чтобы увидеть сигнал',20,canvas.height/2);}}
+drawGraph();initPlots();
+}
+</script></body></html>
