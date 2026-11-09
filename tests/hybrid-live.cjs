@@ -121,6 +121,10 @@ async function checkInputDiscovery(){
  assert.equal(ui.graphSettings().edges[2].m,2.5);
  get('tool-select').click();vertex(0).dispatch('pointerdown',{});change('freq',330);change('damping',120);
  assert.equal(ui.graphSettings().nodes[0].freq,330);assert.equal(ui.graphSettings().nodes[0].damping,120);
+ change('freq','E4');assert.ok(Math.abs(ui.graphSettings().nodes[0].freq-329.6275569128699)<1e-9);assert.match(get('selection').innerHTML,/value="E4"/);
+ change('freq','Db3');assert.ok(Math.abs(ui.graphSettings().nodes[0].freq-138.59131548843604)<1e-9);assert.match(get('selection').innerHTML,/value="C#3"/);
+ change('freq','H4');assert.ok(Math.abs(ui.graphSettings().nodes[0].freq-138.59131548843604)<1e-9);
+ change('freq',330);
  change('damping',500);change('freq',50);
  assert.equal(ui.graphSettings().nodes[0].freq,330,'invalid damping/frequency pair rejected');change('damping',120);
  const delivered=[];ui.forwardGraph=message=>delivered.push(message);

@@ -5,9 +5,23 @@
 /** @typedef {{i: number, startX: number, startY: number, moved: boolean}} HybridDrag */
 /** @typedef {{getGraph: () => HybridDrawing, replaceGraph: (graph: HybridDrawing) => void, refresh: () => void, refreshPanel: () => void}} HybridEditor */
 const hybridEditorText={
- en:{parameters:'Parameters',choose:'Select a vertex or edge.',node:'Vertex',edge:'Edge',type:'Type',resonator:'resonator',nonlinear:'saturation',frequency:'Frequency, Hz',damping:'Damping, 1/s',drive:'Drive',linear:'Drive 0 is linear.',input:'Set IN',output:'Set OUT',multiplier:'Delay multiplier',delay:'Delay in each direction',second:'Select the second vertex to add or remove an edge.',maximum:'Maximum 24 vertices.',minimum:'Keep at least one vertex.',invalid:'Invalid parameter. Check the range and ensure damping is less than 2π × frequency.',hint:'Tap empty space to add; drag vertices to move. Connect: tap two vertices. Double-tap a vertex to switch R/N.',connect:'Tap two vertices to add or remove an edge.',cleared:'Selection cleared.'},
- ru:{parameters:'Параметры',choose:'Выберите вершину или ребро на графе.',node:'Вершина',edge:'Ребро',type:'Тип',resonator:'резонатор',nonlinear:'преобразователь',frequency:'Частота, Гц',damping:'Затухание, 1/с',drive:'Drive',linear:'Drive 0 — линейный режим.',input:'Сделать входом',output:'Сделать выходом',multiplier:'Множитель задержки',delay:'Задержка в каждую сторону',second:'Выберите вторую вершину для ребра.',maximum:'Максимум 24 вершины.',minimum:'Нужна хотя бы одна вершина.',invalid:'Недопустимый параметр. Проверьте диапазон; затухание должно быть меньше 2π × частота.',hint:'Пустое место: добавить вершину · перетаскивание: переместить · ребро: две вершины · двойной клик: R/N.',connect:'Нажмите на две вершины: добавить или убрать ребро.',cleared:'Выбор сброшен.'}
+ en:{parameters:'Parameters',choose:'Select a vertex or edge.',node:'Vertex',edge:'Edge',type:'Type',resonator:'resonator',nonlinear:'saturation',frequency:'Note or frequency (Hz)',noteHelp:'For example E4, D#3 or Db3; A4 = 440 Hz. Frequencies: 50–4000 Hz.',damping:'Damping, 1/s',drive:'Drive',linear:'Drive 0 is linear.',input:'Set IN',output:'Set OUT',multiplier:'Delay multiplier',delay:'Delay in each direction',second:'Select the second vertex to add or remove an edge.',maximum:'Maximum 24 vertices.',minimum:'Keep at least one vertex.',invalid:'Invalid parameter. Check the range and ensure damping is less than 2π × frequency.',hint:'Tap empty space to add; drag vertices to move. Connect: tap two vertices. Double-tap a vertex to switch R/N.',connect:'Tap two vertices to add or remove an edge.',cleared:'Selection cleared.'},
+ ru:{parameters:'Параметры',choose:'Выберите вершину или ребро на графе.',node:'Вершина',edge:'Ребро',type:'Тип',resonator:'резонатор',nonlinear:'преобразователь',frequency:'Нота или частота (Гц)',noteHelp:'Например, E4, D#3 или Db3; A4 = 440 Гц. Частоты: 50–4000 Гц.',damping:'Затухание, 1/с',drive:'Drive',linear:'Drive 0 — линейный режим.',input:'Сделать входом',output:'Сделать выходом',multiplier:'Множитель задержки',delay:'Задержка в каждую сторону',second:'Выберите вторую вершину для ребра.',maximum:'Максимум 24 вершины.',minimum:'Нужна хотя бы одна вершина.',invalid:'Недопустимый параметр. Проверьте диапазон; затухание должно быть меньше 2π × частота.',hint:'Пустое место: добавить вершину · перетаскивание: переместить · ребро: две вершины · двойной клик: R/N.',connect:'Нажмите на две вершины: добавить или убрать ребро.',cleared:'Выбор сброшен.'}
 };
+/** @param {string} input @returns {number} */
+function hybridFrequency(input){
+ const value=input.trim(),match=/^([A-G])([#b♯♭]?)(-?\d+)$/i.exec(value);
+ if(!match)return value===''?NaN:Number(value);
+ const pitches={C:0,D:2,E:4,F:5,G:7,A:9,B:11},accidental=match[2]==='#'||match[2]==='♯'?1:match[2]? -1:0;
+ const midi=(Number(match[3])+1)*12+pitches[match[1].toUpperCase()]+accidental;
+ return 440*2**((midi-69)/12);
+}
+/** @param {number} frequency @returns {string} */
+function hybridFrequencyLabel(frequency){
+ const midi=Math.round(69+12*Math.log2(frequency/440)),exact=440*2**((midi-69)/12);
+ if(Math.abs(frequency-exact)>1e-9)return String(frequency);
+ return ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'][((midi%12)+12)%12]+(Math.floor(midi/12)-1);
+}
 /** @param {'R'|'N'} type @param {number} x @param {number} y @param {number} freq @returns {HybridVertex} */
 function createHybridVertex(type,x,y,freq){return {type,x,y,freq,damping:80,drive:4};}
 /** @param {string} name @returns {HybridDrawing} */
@@ -110,13 +124,13 @@ function createHybridEditor(get,initialGraph,getDelay,onChange,onStatus,text){
    };return;
   }
   const i=selection.i,node=graph.nodes[i];
-  container.innerHTML=`<h2>${text.node} ${i+1}</h2><label class="field"><span>${text.type}</span><select id="nodeType"><option value="R" ${node.type==='R'?'selected':''}>R · ${text.resonator}</option><option value="N" ${node.type==='N'?'selected':''}>N · ${text.nonlinear}</option></select></label>${node.type==='R'?field('freq',text.frequency,node.freq,50,4000,1)+field('damping',text.damping,node.damping,1,500,1):`<label class="field"><span>${text.drive} <output id="driveOut">${node.drive}</output></span><input id="drive" type="range" min="0" max="20" step="0.1" value="${node.drive}"></label><p class="small">${text.linear}</p>`}<div class="row"><button id="inputNode">${graph.input===i?'● IN':text.input}</button><button id="outputNode">${graph.output===i?'● OUT':text.output}</button></div>`;
+  container.innerHTML=`<h2>${text.node} ${i+1}</h2><label class="field"><span>${text.type}</span><select id="nodeType"><option value="R" ${node.type==='R'?'selected':''}>R · ${text.resonator}</option><option value="N" ${node.type==='N'?'selected':''}>N · ${text.nonlinear}</option></select></label>${node.type==='R'?`<label class="field"><span>${text.frequency}</span><input id="freq" type="text" value="${hybridFrequencyLabel(node.freq)}" aria-describedby="noteHelp"></label><p id="noteHelp" class="small">${text.noteHelp}</p>`+field('damping',text.damping,node.damping,1,500,1):`<label class="field"><span>${text.drive} <output id="driveOut">${node.drive}</output></span><input id="drive" type="range" min="0" max="20" step="0.1" value="${node.drive}"></label><p class="small">${text.linear}</p>`}<div class="row"><button id="inputNode">${graph.input===i?'● IN':text.input}</button><button id="outputNode">${graph.output===i?'● OUT':text.output}</button></div>`;
   get('nodeType').onchange=event=>{
    const type=event.target.value;if(type!=='R'&&type!=='N'){onStatus(text.invalid);panel();return;}
    commit({...graph,nodes:graph.nodes.map((vertex,index)=>index===i?{...vertex,type}:vertex)});
   };
   for(const key of node.type==='R'?['freq','damping']:['drive'])get(key).onchange=event=>{
-   const value=Number(event.target.value),limits={freq:[50,4000],damping:[1,500],drive:[0,20]}[key],next={...node,[key]:value};
+   const value=key==='freq'?hybridFrequency(event.target.value):Number(event.target.value),limits={freq:[50,4000],damping:[1,500],drive:[0,20]}[key],next={...node,[key]:value};
    if(event.target.value.trim()===''||!Number.isFinite(value)||value<limits[0]||value>limits[1]||next.damping>=2*Math.PI*next.freq){onStatus(text.invalid);panel();return;}
    commit({...graph,nodes:graph.nodes.map((vertex,index)=>index===i?next:vertex)});
   };
