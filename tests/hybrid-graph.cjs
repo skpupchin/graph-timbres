@@ -1,5 +1,5 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
-const html=fs.readFileSync(path.join(__dirname,'..','hybrid-graph.html'),'utf8'),script=html.match(/<script>([\s\S]*?)<\/script>/)[1],sandbox={module:{exports:{}},Blob,Float32Array,Float64Array,Uint16Array};vm.runInNewContext(script,sandbox);const {RATE,renderWet,createStepper,mix,wav}=sandbox.module.exports;
+const html=fs.readFileSync(path.join(__dirname,'..','hybrid-graph.html'),'utf8'),script=html.match(/<script>([\s\S]*?)<\/script>/)[1],sandbox={module:{exports:{}},Blob,Float32Array,Float64Array,Uint16Array};vm.createContext(sandbox);vm.runInContext(fs.readFileSync(path.join(__dirname,'../hybrid-dsp.js'),'utf8'),sandbox);vm.runInContext(script,sandbox);const {RATE,renderWet,createStepper,mix,wav}=sandbox.module.exports;
 const R=(f=440)=>({type:'R',freq:f,damping:80,drive:4}),N=(d=4)=>({type:'N',freq:440,damping:80,drive:d});
 const base=(nodes,edges=[],extra={})=>({nodes,edges,input:0,output:nodes.length-1,delay:4,feedback:.7,tone:10000,wet:1,gain:1,...extra});
 const sine=(f,sec=1)=>Float32Array.from({length:RATE*sec},(_,i)=>.8*Math.sin(2*Math.PI*f*i/RATE));

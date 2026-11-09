@@ -1,0 +1,385 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hybrid graph · live guitar</title>
+<link rel="stylesheet" href="hybrid-editor.css">
+<style>
+:root{color-scheme:dark;font:16px system-ui,sans-serif;background:#10151c;color:#edf5f5}*{box-sizing:border-box}body{max-width:940px;margin:auto;padding:24px}h1{font-size:25px;margin:0}p{line-height:1.5;color:#b5c5ce}a{color:#c8ef80}.panel{background:#19222c;border:1px solid #344351;border-radius:14px;padding:20px;margin:18px 0}.row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}label{display:block}label span{display:flex;justify-content:space-between;gap:8px;margin-bottom:8px}button,select{font:inherit;background:#263441;color:inherit;border:1px solid #526574;border-radius:8px;padding:12px}select{width:100%}button{cursor:pointer;min-height:48px}button:disabled{opacity:.45;cursor:default}.primary{background:#c8ef80;color:#152315;font-weight:700}#stop{border-color:#ffa876}#bypass[aria-pressed=true]{background:#79c9e6;color:#14212a}input[type=range]{width:100%;accent-color:#c8ef80}output{color:#c8ef80;font-variant-numeric:tabular-nums}meter{width:100%;height:20px}.small{font-size:13px}#status{white-space:pre-wrap;margin-bottom:0}#diagnostics{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.6;font-size:13px;color:#b5c5ce}#route{color:#c8ef80;font-size:20px;font-weight:600;margin:0 0 18px}.error{color:#ffa876!important}fieldset{border:0;padding:0;margin:0}fieldset:disabled{opacity:.6}summary{cursor:pointer}@media(max-width:600px){body{padding:14px}.grid{grid-template-columns:1fr}.panel{padding:16px}}
+</style>
+</head>
+<body>
+<h1>◉ Hybrid / live guitar</h1>
+<p>Guitar → Spark USB → graph → selected speakers. Input and output are selected separately.</p>
+<section class="panel">
+<div class="row"><button id="inputs">Find audio inputs</button><a href="hybrid-graph.html">Offline graph lab ↗</a></div>
+<p class="small">Allow microphone access to reveal device names. This step does not play audio. Choose the Spark input, or choose Android default input to test the source Android routes to this browser.</p>
+<label><span>Audio input</span><select id="device" disabled><option value="">Find inputs first</option></select></label>
+<label style="margin-top:16px"><span>Audio output</span><select id="outputDevice"><option value="">Android selected output (may be Spark USB)</option></select></label>
+<div class="row" style="margin-top:12px"><button id="chooseOutput">Choose output…</button><button id="testOutput">Test output tone</button></div>
+<p id="outputStatus" class="small" role="status">Checking output selection support…</p>
+<p class="small">For tablet playback, select its built-in speaker. Android selected output does not necessarily mean the tablet. If the browser cannot select speakers, try Samsung Settings → Sounds and vibration → Separate app sound → Samsung Internet → Phone/tablet, if available. A test tone confirms where app audio plays.</p>
+<div class="row" style="margin-top:18px"><button id="start" class="primary" disabled>Start monitoring</button><button id="stop" disabled>Stop</button><button id="bypass" aria-pressed="false">Bypass: off</button><button id="mute" aria-pressed="false">Mute app output: off</button></div>
+<p id="status" role="status" aria-live="polite">Stopped. Start with the Spark’s MUSIC VOLUME low.</p>
+</section>
+<section class="panel">
+<div class="grid">
+<label><span>Input gain · before graph <output id="inputDbValue"></output></span><input id="inputDb" type="range" min="-24" max="60" value="0" step="1"></label>
+<label><span>Wet gain <output id="wetDbValue"></output></span><input id="wetDb" type="range" min="-12" max="48" value="18" step="1"></label>
+<label><span>Dry / wet <output id="mixValue"></output></span><input id="mix" type="range" min="0" max="100" value="50" step="1"></label>
+<label><span>Output volume <output id="outputDbValue"></output></span><input id="outputDb" type="range" min="-60" max="6" value="-18" step="1"></label>
+<label><span>Captured input <output id="inputLevel">—</output></span><meter id="inputMeter" min="0" max="1" high="0.9" optimum="0.3" value="0"></meter></label>
+<label><span>Graph input after gain <output id="graphInputLevel">—</output></span><meter id="graphInputMeter" min="0" max="1" optimum="0.5" value="0"></meter></label>
+<label><span>Graph wet signal after wet gain <output id="wetLevel">—</output></span><meter id="wetMeter" min="0" max="1" high="0.9" optimum="0.3" value="0"></meter></label>
+<label><span>Output before limiter <output id="outputLevel">—</output></span><meter id="outputMeter" min="0" max="1" high="0.9" optimum="0.3" value="0"></meter></label>
+</div>
+<p class="small">Input gain boosts the signal before the graph and its saturation vertices. Start at +24 dB and raise it for more drive; lower Output volume to control listening level. Internal graph input may exceed 0 dBFS without being clipped. Gain and mix changes are live; Apply graph is not needed for them. Bypass sends the captured input directly to the output volume control. Mute app output silences this page; guitar still audible with mute on comes from another path, such as the Spark’s direct monitoring. A ceiling at ±0.98 limits output peaks; lower gain if the output meter shows LIMIT. Wet loudness is not normalized.</p>
+</section>
+<section class="panel">
+<h2 style="margin-top:0">Build the graph</h2>
+<div class="editor-tools">
+<button id="tool-select" class="active" aria-pressed="true">↖ Select / move</button><button id="tool-add" aria-pressed="false">＋ Add vertex</button><button id="tool-edge" aria-pressed="false">⌁ Connect</button>
+<select id="addType" aria-label="Type of new vertex"><option value="R">New: R · resonator</option><option value="N">New: N · saturation</option></select>
+<button id="delete" disabled>Delete selected</button><button id="undo" disabled>↶ Undo</button><button id="clear">Reset to one vertex</button>
+</div>
+<p id="hint" class="small"></p>
+<div class="editor-layout"><div class="editor-canvas"><svg id="graph" class="editor-graph" viewBox="0 0 1000 560" preserveAspectRatio="xMidYMid meet" aria-label="Editable audio graph"></svg></div><aside id="selection" class="editor-selection"></aside></div>
+<fieldset id="graphControls">
+<div class="grid">
+<label><span>Load a demo graph</span><select id="preset"><option value="">Choose a graph…</option><option value="rnr">R–N–R chain</option><option value="nrr">N–R–R chain</option><option value="loop">R–N–R–N loop</option><option value="r">Resonator chain</option><option value="n">Saturation chain</option><option value="single-r">Single resonator</option><option value="single-n">Single saturation</option></select></label>
+<label><span>Edge delay <output id="delayValue"></output></span><input id="delay" type="range" min="1" max="150" step="0.5" value="1.5"></label>
+<label><span>Feedback <output id="feedbackValue"></output></span><input id="feedback" type="range" min="0" max="90" step="1" value="65"></label>
+<label><span>Feedback low pass <output id="toneValue"></output></span><input id="tone" type="range" min="500" max="18000" step="100" value="10000"></label>
+</div>
+<div class="row" style="margin-top:18px"><button id="apply" class="primary">Apply graph</button><span class="small" id="graphStatus" role="status">Graph ready.</span></div>
+</fieldset>
+<p id="route" style="margin-top:18px"></p>
+<p class="small">Select a vertex to edit its R/N type, resonator frequency/damping or saturation drive, and set IN/OUT. Select an edge to edit its delay multiplier. Graph and network edits take effect when you press Apply graph, with a 20 ms crossfade. Feedback also controls signal transfer between vertices: 0% silences a wet output on another vertex. Vertex positions do not change the sound.</p>
+</section>
+<details class="panel" open><summary>Audio diagnostics</summary><pre id="discovery" style="white-space:pre-wrap;overflow-wrap:anywhere;font:13px/1.6 system-ui,sans-serif">Input discovery has not run.</pre><p id="diagnostics">Not connected. Reported latency will appear here; it is not a measured round trip.</p></details>
+<p class="small">Serve this folder over localhost or HTTPS. For dry guitar input, bypass the Spark’s amp and effects in its app. Input capture requests echo cancellation, noise suppression, and automatic gain control off. Output routing follows Android’s media settings.</p>
+<script src="hybrid-dsp.js"></script>
+<script src="hybrid-editor.js"></script>
+<script id="worklet" type="text/plain">
+class HybridLiveProcessor extends AudioWorkletProcessor {
+ static get parameterDescriptors(){return [
+  {name:'inputDb',defaultValue:0,minValue:-24,maxValue:60,automationRate:'k-rate'},
+  {name:'wetDb',defaultValue:18,minValue:-12,maxValue:48,automationRate:'k-rate'},
+  {name:'mix',defaultValue:0.5,minValue:0,maxValue:1,automationRate:'k-rate'},
+  {name:'outputDb',defaultValue:-18,minValue:-60,maxValue:6,automationRate:'k-rate'},
+  {name:'muted',defaultValue:0,minValue:0,maxValue:1,automationRate:'k-rate'},
+  {name:'bypass',defaultValue:0,minValue:0,maxValue:1,automationRate:'k-rate'}
+ ];}
+ constructor(options){
+  super();
+  this.step=createHybridStepper(options.processorOptions.graph,sampleRate);
+  this.previous=null;this.transition=0;this.fadeFrames=Math.round(sampleRate*0.02);
+  this.inputGain=1;this.wetGain=10**(18/20);this.outputGain=10**(-18/20);this.mix=0.5;this.bypass=0;
+  this.smoothing=1-Math.exp(-1/(0.005*sampleRate));this.meterFrames=0;this.inputPeak=0;this.graphInputPeak=0;this.wetPeak=0;this.outputPeak=0;this.failed=false;this.initialized=false;
+  this.port.onmessage=event=>{
+   try{
+    const next=createHybridStepper(event.data.graph,sampleRate);
+    this.previous=this.step;this.step=next;this.transition=this.fadeFrames;
+    this.port.postMessage({type:'applied'});
+   }catch(error){this.fail(error);}
+  };
+ }
+ fail(error){this.failed=true;this.port.postMessage({type:'error',name:error.name,message:error.message});}
+ process(inputs,outputs,parameters){
+  const output=outputs[0][0];
+  if(this.failed){output.fill(0);return true;}
+  const input=inputs[0][0],inputGain=10**(parameters.inputDb[0]/20),wetGain=10**(parameters.wetDb[0]/20),outputGain=parameters.muted[0]>=0.5?0:10**(parameters.outputDb[0]/20);
+  if(!this.initialized){this.inputGain=inputGain;this.wetGain=wetGain;this.outputGain=outputGain;this.mix=parameters.mix[0];this.bypass=parameters.bypass[0];this.initialized=true;}
+  try{
+   for(let i=0;i<output.length;i++){
+    this.inputGain+=(inputGain-this.inputGain)*this.smoothing;
+    this.wetGain+=(wetGain-this.wetGain)*this.smoothing;
+    this.outputGain+=(outputGain-this.outputGain)*this.smoothing;
+    this.mix+=(parameters.mix[0]-this.mix)*this.smoothing;
+    this.bypass+=(parameters.bypass[0]-this.bypass)*this.smoothing;
+    const raw=input?input[i]:0,dry=raw*this.inputGain;
+    let wet=this.step.sample(dry);
+    if(this.transition>0){const fraction=1-this.transition/this.fadeFrames;wet=this.previous.sample(dry)*(1-fraction)+wet*fraction;if(--this.transition===0)this.previous=null;}
+    const effected=dry*(1-this.mix)+wet*this.wetGain*this.mix;
+    const value=(effected*(1-this.bypass)+raw*this.bypass)*this.outputGain;
+    if(!Number.isFinite(value))throw new RangeError('Non-finite output sample');
+    output[i]=Math.max(-0.98,Math.min(0.98,value));
+    this.inputPeak=Math.max(this.inputPeak,Math.abs(raw));this.graphInputPeak=Math.max(this.graphInputPeak,Math.abs(dry));this.wetPeak=Math.max(this.wetPeak,Math.abs(wet*this.wetGain));this.outputPeak=Math.max(this.outputPeak,Math.abs(value));
+   }
+  }catch(error){output.fill(0);this.fail(error);return true;}
+  this.meterFrames+=output.length;
+  if(this.meterFrames>=sampleRate/10){this.port.postMessage({type:'meters',input:this.inputPeak,graphInput:this.graphInputPeak,wet:this.wetPeak,output:this.outputPeak});this.inputPeak=0;this.graphInputPeak=0;this.wetPeak=0;this.outputPeak=0;this.meterFrames=0;}
+  return true;
+ }
+}
+registerProcessor('hybrid-live',HybridLiveProcessor);
+</script>
+<script>
+'use strict';
+/** @typedef {{context: AudioContext, stream: MediaStream, source: MediaStreamAudioSourceNode, processor: AudioWorkletNode}} LiveSession */
+const $=id=>document.getElementById(id);
+const systemInput='__android_default__';
+/** @type {LiveSession|null} */
+let session=null;
+let generation=0,bypassed=false,muted=false,busy=false;
+/** @type {MediaDeviceInfo[]} */
+let outputDevices=[];
+/** @type {AudioContext|null} */
+let toneContext=null;
+/** @type {HybridGraph} */
+let appliedGraph={...createHybridPreset('rnr'),delay:+$('delay').value,feedback:+$('feedback').value/100,tone:+$('tone').value};
+const liveIds=['inputDb','wetDb','mix','outputDb'];
+const graphIds=['delay','feedback','tone'];
+const units={inputDb:' dB',wetDb:' dB',mix:'%',outputDb:' dB',delay:' ms',feedback:'%',tone:' Hz'};
+function setStatus(message,isError){$('status').textContent=message;$('status').classList.toggle('error',isError);}
+function updateButtons(){ $('start').disabled=busy||session!==null||toneContext!==null||!$('device').value;$('stop').disabled=!busy&&session===null&&toneContext===null;$('device').disabled=busy||session!==null||$('device').options.length<2;$('inputs').disabled=busy||session!==null||toneContext!==null;$('outputDevice').disabled=busy||toneContext!==null||!canSelectOutput();$('chooseOutput').disabled=busy||toneContext!==null||!canSelectOutput()||typeof navigator.mediaDevices?.selectAudioOutput!=='function';$('testOutput').disabled=busy||toneContext!==null; }
+function canSelectOutput(){return typeof window.AudioContext?.prototype.setSinkId==='function';}
+/** @param {MediaDeviceInfo[]} devices @returns {void} */
+function populateOutputs(devices){
+ const selected=$('outputDevice').value;
+ outputDevices=devices.filter(device=>device.kind==='audiooutput');
+ $('outputDevice').replaceChildren(new Option('Android selected output (may be Spark USB)',''));
+ for(const device of outputDevices)if(device.deviceId&&device.deviceId!=='default')$('outputDevice').add(new Option(device.label||'Unnamed output',device.deviceId));
+ if(selected){
+  if(!outputDevices.some(device=>device.deviceId===selected))throw new DOMException('Selected output disappeared. Choose an output again.','NotFoundError');
+  $('outputDevice').value=selected;
+ }
+ showOutputSupport();
+}
+function showOutputSupport(){
+ $('outputStatus').textContent=canSelectOutput()?'Choose a built-in speaker output for tablet playback. Only outputs exposed by this browser are listed.':'This browser cannot select Web Audio speakers. Use Android/Samsung output routing. This page cannot force the tablet speaker here.';
+}
+/** @param {AudioContext} context @param {string} deviceId @returns {Promise<void>} */
+async function routeOutput(context,deviceId){
+ if(typeof context.setSinkId!=='function'){
+  if(!deviceId)return;
+  throw new DOMException('This browser cannot select the requested output. Choose the tablet in Android sound settings.','NotSupportedError');
+ }
+ await context.setSinkId(deviceId);
+}
+async function chooseOutput(){
+ try{
+  if(!canSelectOutput()||typeof navigator.mediaDevices?.selectAudioOutput!=='function')throw new DOMException('This browser cannot open an output chooser. Use Android sound settings.','NotSupportedError');
+  const device=await navigator.mediaDevices.selectAudioOutput();
+  populateOutputs([...outputDevices.filter(output=>output.deviceId!==device.deviceId),device]);
+  $('outputDevice').value=device.deviceId;
+  await changeOutput();
+ }catch(error){$('outputStatus').textContent=describeError(error);}
+}
+async function changeOutput(){
+ const deviceId=$('outputDevice').value,active=session;
+ try{
+  if(active){await routeOutput(active.context,deviceId);showDiagnostics(active);}
+  $('outputStatus').textContent='Output '+(active?'selected':'prepared')+': '+$('outputDevice').selectedOptions[0].text+'. Use Test output tone to check the physical speaker.';
+ }catch(error){$('outputStatus').textContent='Output change failed: '+describeError(error);if(active)await failAudio('Output change failed: '+describeError(error));}
+}
+async function testOutput(){
+ if(busy||toneContext)return;
+ let context=null;
+ try{
+  context=new AudioContext({latencyHint:'interactive'});toneContext=context;updateButtons();
+  await context.resume();await routeOutput(context,$('outputDevice').value);
+  if(toneContext!==context)return;
+  const oscillator=context.createOscillator(),gain=context.createGain(),now=context.currentTime;
+  oscillator.frequency.value=660;gain.gain.setValueAtTime(0,now);gain.gain.linearRampToValueAtTime(0.06,now+0.02);gain.gain.setValueAtTime(0.06,now+0.35);gain.gain.linearRampToValueAtTime(0,now+0.4);
+  oscillator.connect(gain);gain.connect(context.destination);
+  await new Promise(resolve=>{oscillator.onended=resolve;oscillator.start();oscillator.stop(now+0.45);context.addEventListener('statechange',()=>{if(context.state==='closed')resolve();});});
+  $('outputStatus').textContent='Test tone finished. The speaker you heard is where app audio is routed.';
+ }catch(error){$('outputStatus').textContent='Output test failed: '+describeError(error);}
+ finally{if(context&&context.state!=='closed')await context.close();if(toneContext===context)toneContext=null;updateButtons();}
+}
+function labelValue(id){
+ const value=+$(id).value;
+ $(id+'Value').textContent=id==='inputDb'?(value>0?'+':'')+value+' dB · '+(10**(value/20)).toFixed(value<0?2:1)+'×':$(id).value+units[id];
+}
+function markGraphPending(){
+ const draft=graphSettings();
+ const sound=graph=>JSON.stringify({...graph,nodes:graph.nodes.map(({type,freq,damping,drive})=>({type,freq,damping,drive}))});
+ if(sound(draft)===sound(appliedGraph)){showGraph();return;}
+ $('graphStatus').textContent='Changes pending · press Apply graph';
+}
+const editor=createHybridEditor($,createHybridPreset('rnr'),()=>+$('delay').value,()=>markGraphPending(),message=>{$('graphStatus').textContent=message;},hybridEditorText.en);
+/** @returns {HybridGraph} */
+function graphSettings(){return {...editor.getGraph(),delay:+$('delay').value,feedback:+$('feedback').value/100,tone:+$('tone').value};}
+/** @param {HybridGraph} graph @param {number} rate @returns {number} */
+function graphPathDelay(graph,rate){
+ const times=Array(graph.nodes.length).fill(Infinity),visited=new Set();times[graph.input]=0;
+ for(let count=0;count<graph.nodes.length;count++){
+  let vertex=-1;
+  for(let i=0;i<times.length;i++)if(!visited.has(i)&&(vertex===-1||times[i]<times[vertex]))vertex=i;
+  if(vertex===-1||!Number.isFinite(times[vertex]))break;
+  if(vertex===graph.output)return times[vertex];
+  visited.add(vertex);
+  for(const edge of graph.edges){
+   const neighbour=edge.a===vertex?edge.b:edge.b===vertex?edge.a:-1;
+   if(neighbour!==-1)times[neighbour]=Math.min(times[neighbour],times[vertex]+Math.max(1,Math.round(rate*graph.delay*edge.m/1000))*1000/rate);
+  }
+ }
+ return times[graph.output];
+}
+function showGraph(){
+ const pathDelay=graphPathDelay(appliedGraph,session?session.context.sampleRate:48000);
+ $('route').textContent=`IN: vertex ${appliedGraph.input+1} → ${appliedGraph.nodes.length} vertices · ${appliedGraph.edges.length} edges → OUT: vertex ${appliedGraph.output+1}`;
+ $('graphStatus').textContent=Number.isFinite(pathDelay)?'Applied · '+pathDelay.toFixed(1)+' ms shortest wet path delay':'Applied · IN and OUT are disconnected; wet output is silent';
+}
+function applyGraph(){
+ const graph=graphSettings();createHybridStepper(graph,session?session.context.sampleRate:48000);
+ appliedGraph=graph;
+ if(session){session.processor.port.postMessage({graph});$('graphStatus').textContent='Applying…';}else showGraph();
+}
+function updateParameter(id){
+ if(!session)return;
+ const parameter=session.processor.parameters.get(id);
+ if(!parameter)throw new Error('Missing audio parameter: '+id);
+ parameter.setValueAtTime(id==='mix'?+$(id).value/100:+$(id).value,session.context.currentTime);
+}
+function describeError(error){return error.name+': '+error.message;}
+/** @param {string} deviceId @returns {MediaStreamConstraints} */
+function captureConstraints(deviceId){
+ return {audio:{...(deviceId===systemInput?{}:{deviceId:{exact:deviceId}}),channelCount:{ideal:1},echoCancellation:false,noiseSuppression:false,autoGainControl:false},video:false};
+}
+async function findInputs(){
+ if(busy||session)return;
+ if(!window.isSecureContext||!navigator.mediaDevices?.getUserMedia){setStatus('Microphone access requires localhost or HTTPS in a browser with audio capture support.',true);return;}
+ const token=++generation;
+ busy=true;updateButtons();setStatus('Requesting audio input permission…',false);
+ let permissionStream=null;
+ try{
+  permissionStream=await navigator.mediaDevices.getUserMedia(captureConstraints(systemInput));
+  const allDevices=await navigator.mediaDevices.enumerateDevices();
+  if(token!==generation)return;
+  const devices=allDevices.filter(device=>device.kind==='audioinput'),track=permissionStream.getAudioTracks()[0],settings=track.getSettings();
+  populateOutputs(allDevices);
+  $('device').replaceChildren(new Option('Choose an audio input',''));
+  $('device').add(new Option('Android default input (system routing)',systemInput));
+  for(const device of devices)$('device').add(new Option(device.label||'Unnamed audio input',device.deviceId));
+  $('discovery').textContent=[
+   'Browser: '+navigator.userAgent,
+   'Default capture opened: '+(track.label||'(name not exposed)'),
+   'Default capture settings: '+JSON.stringify(settings,null,2),
+   'Browser audio inputs ('+devices.length+'):',
+   ...devices.map(device=>'• '+(device.label||'(name not exposed)')+' · '+device.deviceId),
+   'Browser audio outputs ('+outputDevices.length+'):',
+   ...outputDevices.map(device=>'• '+(device.label||'(name not exposed)')+' · '+device.deviceId),
+   'Web Audio output selection: '+(canSelectOutput()?'supported':'not supported'),
+   'A generic default name does not identify the physical input. Check the meter while strumming, then tap the tablet microphone to distinguish the sources.'
+  ].join('\n');
+  const namedUsb=devices.some(device=>/spark|positive|usb/i.test(device.label));
+  setStatus(namedUsb?'Choose the Spark/USB input, then start monitoring.':'The browser did not list a named USB input. Select Android default input to test its system route. Close BandLab first. If it captures the tablet microphone, compare this page in Chrome.',false);
+ }catch(error){
+  if(token===generation){setStatus(describeError(error),true);$('discovery').textContent='Input discovery failed: '+describeError(error)+'\nClose other recording apps and check microphone permission for this browser and this site.';}
+ }
+ finally{if(permissionStream)permissionStream.getTracks().forEach(track=>track.stop());busy=false;updateButtons();}
+}
+function dbLevel(peak){return peak>0?Math.max(-120,20*Math.log10(peak)).toFixed(1)+' dBFS':'−∞ dBFS';}
+function showMeters(data){
+ $('inputMeter').value=Math.min(1,data.input);$('graphInputMeter').value=Math.min(1,data.graphInput);$('wetMeter').value=Math.min(1,data.wet);$('outputMeter').value=Math.min(1,data.output);
+ $('inputLevel').textContent=dbLevel(data.input)+(data.input>=0.999?' · CLIP':'');
+ $('graphInputLevel').textContent=dbLevel(data.graphInput);
+ $('wetLevel').textContent=dbLevel(data.wet);
+ $('outputLevel').textContent=dbLevel(data.output)+(data.output>0.98?' · LIMIT':'');
+}
+function showDiagnostics(active){
+ const track=active.stream.getAudioTracks()[0],settings=track.getSettings(),context=active.context;
+ const milliseconds=value=>typeof value==='number'?(value*1000).toFixed(1)+' ms':'not reported';
+ const setting=value=>value===undefined?'not reported':String(value);
+ $('diagnostics').textContent=[
+  'Input: '+track.label,
+  'Capture device ID: '+settings.deviceId,
+  'Audio context: '+context.sampleRate+' Hz · '+context.state,
+  'Capture: '+setting(settings.sampleRate)+' Hz · '+setting(settings.channelCount)+' channel(s)',
+  'Reported capture latency: '+milliseconds(settings.latency),
+  'Reported graph → audio system: '+milliseconds(context.baseLatency),
+  'Reported output latency: '+milliseconds(context.outputLatency),
+  'Echo cancellation: '+setting(settings.echoCancellation)+' · Noise suppression: '+setting(settings.noiseSuppression)+' · Auto gain: '+setting(settings.autoGainControl),
+  'Requested output: '+($('outputDevice').value?$('outputDevice').selectedOptions[0].text:'Android selected output (physical speaker unconfirmed)'),
+  'Reported output device ID: '+setting(context.sinkId),
+  'App output muted: '+muted+' · Bypass: '+bypassed,
+  'These latency reports do not measure the complete round trip.'
+ ].join('\n');
+}
+async function stopAudio(){
+ generation++;const active=session;session=null;
+ const tone=toneContext;toneContext=null;
+ if(tone&&tone.state!=='closed')await tone.close();
+ if(active){
+  active.context.onstatechange=null;active.stream.getTracks().forEach(track=>{track.onended=null;track.stop();});
+  active.processor.port.onmessage=null;active.processor.onprocessorerror=null;active.source.disconnect();active.processor.disconnect();active.processor.port.close();
+  await active.context.close();
+ }
+ showMeters({input:0,graphInput:0,wet:0,output:0});updateButtons();
+}
+async function failAudio(message){
+ setStatus(message,true);
+ try{await stopAudio();}catch(error){setStatus(message+'\nCleanup failed: '+describeError(error),true);}
+}
+async function startAudio(){
+ if(busy||session)return;
+ if(!window.AudioContext||!window.AudioWorkletNode){setStatus('This browser does not support AudioWorklet. Use a current browser on localhost or HTTPS.',true);return;}
+ const deviceId=$('device').value;if(!deviceId){setStatus('Choose an audio input first.',true);return;}
+ const token=++generation;busy=true;updateButtons();setStatus('Opening audio input…',false);
+ let context=null,stream=null,owned=false;
+ try{
+  context=new AudioContext({latencyHint:'interactive'});await context.resume();
+  if(!context.audioWorklet)throw new Error('AudioWorklet is unavailable. Serve the page from localhost or HTTPS.');
+  stream=await navigator.mediaDevices.getUserMedia(captureConstraints(deviceId));
+  await routeOutput(context,$('outputDevice').value);
+  if(token!==generation)return;
+  const workletSource=createHybridProcessors.toString()+'\n'+createHybridStepper.toString()+'\n'+$('worklet').textContent;
+  const url=URL.createObjectURL(new Blob([workletSource],{type:'text/javascript'}));
+  try{await context.audioWorklet.addModule(url);}finally{URL.revokeObjectURL(url);}
+  if(token!==generation)return;
+  createHybridStepper(appliedGraph,context.sampleRate);
+  const processor=new AudioWorkletNode(context,'hybrid-live',{numberOfInputs:1,numberOfOutputs:1,outputChannelCount:[1],channelCount:1,channelCountMode:'explicit',processorOptions:{graph:appliedGraph},parameterData:{inputDb:+$('inputDb').value,wetDb:+$('wetDb').value,mix:+$('mix').value/100,outputDb:+$('outputDb').value,bypass:bypassed?1:0,muted:muted?1:0}});
+  const source=context.createMediaStreamSource(stream);
+  const active={context,stream,source,processor};session=active;owned=true;
+  processor.port.onmessage=event=>{
+   if(session!==active)return;
+   if(event.data.type==='meters')showMeters(event.data);
+   if(event.data.type==='applied'){showGraph();markGraphPending();}
+   if(event.data.type==='error')void failAudio('Audio processing failed: '+event.data.name+': '+event.data.message);
+  };
+  processor.onprocessorerror=()=>{if(session===active)void failAudio('AudioWorklet stopped after a processing error. Stop and restart monitoring.');};
+  for(const track of stream.getAudioTracks())track.onended=()=>{if(session===active)void failAudio('Audio input disconnected. Reconnect the Spark and find inputs again.');};
+  context.onstatechange=()=>{
+   if(session!==active)return;
+   showDiagnostics(active);
+   if(context.state!=='running')setStatus('Audio context is '+context.state+'. Stop and restart monitoring.',true);
+  };
+  source.connect(processor);processor.connect(context.destination);
+  showDiagnostics(active);showGraph();markGraphPending();setStatus('Monitoring · '+stream.getAudioTracks()[0].label,false);
+ }catch(error){if(token===generation)await failAudio(describeError(error));}
+ finally{
+  if(!owned){if(stream)stream.getTracks().forEach(track=>track.stop());if(context&&context.state!=='closed')await context.close();}
+  busy=false;updateButtons();
+ }
+}
+for(const id of [...liveIds,...graphIds]){
+ labelValue(id);
+ $(id).addEventListener('input',()=>{labelValue(id);if(liveIds.includes(id))updateParameter(id);else{markGraphPending();if(id==='delay')editor.refreshPanel();}});
+}
+$('apply').onclick=()=>{try{applyGraph();}catch(error){setStatus(describeError(error),true);}};
+$('inputs').onclick=()=>{void findInputs();};
+$('device').onchange=updateButtons;
+$('outputDevice').onchange=()=>{void changeOutput();};
+$('chooseOutput').onclick=()=>{void chooseOutput();};
+$('testOutput').onclick=()=>{void testOutput();};
+$('start').onclick=()=>{void startAudio();};
+$('stop').onclick=()=>{setStatus('Stopped.',false);void stopAudio().catch(error=>setStatus(describeError(error),true));};
+$('bypass').onclick=()=>{
+ bypassed=!bypassed;$('bypass').setAttribute('aria-pressed',String(bypassed));$('bypass').textContent='Bypass: '+(bypassed?'on':'off');
+ if(session)session.processor.parameters.get('bypass').setValueAtTime(bypassed?1:0,session.context.currentTime);
+ if(session)showDiagnostics(session);
+};
+$('mute').onclick=()=>{
+ muted=!muted;$('mute').setAttribute('aria-pressed',String(muted));$('mute').textContent='Mute app output: '+(muted?'on':'off');
+ if(session){session.processor.parameters.get('muted').setValueAtTime(muted?1:0,session.context.currentTime);showDiagnostics(session);}
+};
+window.addEventListener('pagehide',()=>{void stopAudio().catch(error=>console.error('Audio cleanup failed',{name:error.name,message:error.message}));});
+showGraph();
+showOutputSupport();updateButtons();
+if(!window.isSecureContext)setStatus('Open this page on localhost or HTTPS to enable audio capture.',true);
+</script>
+</body>
+</html>
