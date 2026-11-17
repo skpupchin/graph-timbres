@@ -40,14 +40,14 @@
 <h2 style="margin-top:0">Build the graph</h2>
 <div class="editor-tools">
 <button id="tool-select" class="active" aria-pressed="true">↖ Select / move</button><button id="tool-add" aria-pressed="false">＋ Add vertex</button><button id="tool-edge" aria-pressed="false">⌁ Connect</button>
-<select id="addType" aria-label="Type of new vertex"><option value="R">New: R · resonator</option><option value="N">New: N · saturation</option></select>
+
 <button id="delete" disabled>Delete selected</button><button id="undo" disabled>↶ Undo</button><button id="clear">Reset to one vertex</button>
 </div>
 <p id="hint" class="small"></p>
 <div class="editor-layout"><div class="editor-canvas"><svg id="graph" class="editor-graph" viewBox="0 0 1000 560" preserveAspectRatio="xMidYMid meet" aria-label="Editable audio graph"></svg></div><aside id="selection" class="editor-selection"></aside></div>
 <fieldset id="graphControls">
 <div class="grid">
-<label><span>Load a demo graph</span><select id="preset"><option value="">Choose a graph…</option><option value="rnr">R–N–R chain</option><option value="nrr">N–R–R chain</option><option value="loop">R–N–R–N loop</option><option value="r">Resonator chain</option><option value="n">Saturation chain</option><option value="single-r">Single resonator</option><option value="single-n">Single saturation</option></select></label>
+<label><span>Load a demo graph</span><select id="preset"><option value="">Presets…</option><option value="drive">1 · Drive 6</option><option value="reverb">2 · Reverb · 25 ms</option><option value="echo">3 · Extreme echo · 100 ms</option><option value="mixed">4 · One blue vertex · 330 Hz</option><option value="irregular-reverb">5 · Irregular reverb</option></select></label>
 <label><span>Edge delay <output id="delayValue"></output></span><input id="delay" type="range" min="1" max="150" step="0.5" value="1.5"></label>
 <label><span>Feedback <output id="feedbackValue"></output></span><input id="feedback" type="range" min="0" max="90" step="1" value="65"></label>
 <label><span>Feedback low pass <output id="toneValue"></output></span><input id="tone" type="range" min="500" max="18000" step="100" value="10000"></label>
@@ -199,7 +199,10 @@ function markGraphPending(){
  if(sound(draft)===sound(appliedGraph)){showGraph();return;}
  $('graphStatus').textContent='Changes pending · press Apply graph';
 }
-const editor=createHybridEditor($,createHybridPreset('rnr'),()=>+$('delay').value,()=>markGraphPending(),message=>{$('graphStatus').textContent=message;},hybridEditorText.en);
+const editor=createHybridEditor($,createHybridPreset('rnr'),()=>+$('delay').value,()=>markGraphPending(),message=>{$('graphStatus').textContent=message;},hybridEditorText.en,{
+ get:()=>Object.fromEntries(graphIds.map(id=>[id,+$(id).value])),
+ set:values=>{for(const [id,value] of Object.entries(values)){$(id).value=String(value);labelValue(id);}}
+});
 /** @returns {HybridGraph} */
 function graphSettings(){return {...editor.getGraph(),delay:+$('delay').value,feedback:+$('feedback').value/100,tone:+$('tone').value};}
 /** @param {HybridGraph} graph @param {number} rate @returns {number} */

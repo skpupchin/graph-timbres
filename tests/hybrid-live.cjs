@@ -87,7 +87,7 @@ async function checkInputDiscovery(){
  function makeElement(id){return {
   id,value:'',textContent:'',innerHTML:'',options:[],children:[],dataset:{},listeners:{},disabled:false,classList:{toggle(){}},
   addEventListener(name,handler){(this.listeners[name]??=[]).push(handler);},
-  dispatch(name,fields){const event={target:this,button:0,pointerId:1,clientX:0,clientY:0,preventDefault(){},stopPropagation(){},...fields};for(const handler of this.listeners[name]||[])handler(event);},
+  dispatch(name,fields){const event={type:name,target:this,button:0,pointerId:1,clientX:0,clientY:0,preventDefault(){},stopPropagation(){},...fields};for(const handler of this.listeners[name]||[])handler(event);},
   click(){if(!this.disabled&&this.onclick)return this.onclick({target:this});},
   setAttribute(name,value){this[name]=value;if(name==='data-node')this.dataset.node=value;},
   appendChild(element){this.children.push(element);return element;},
@@ -111,7 +111,10 @@ async function checkInputDiscovery(){
  const drawing=get('graph'),vertex=i=>drawing.children.find(element=>element.dataset.node===String(i));
  const change=(id,value)=>{get(id).value=String(value);get(id).onchange({target:get(id)});};
  assert.equal(ui.graphSettings().nodes.length,3);
- get('tool-add').click();get('addType').value='N';drawing.dispatch('pointerdown',{clientX:900,clientY:450});
+ const tap=(i,time,extra={})=>{const fields={pointerType:'touch',timeStamp:time,...extra};vertex(i).dispatch('pointerdown',fields);drawing.dispatch('pointerup',{...fields,timeStamp:time+30});};
+ get('tool-add').click();drawing.dispatch('pointerdown',{clientX:900,clientY:450});
+ assert.equal(ui.graphSettings().nodes[3].type,'R','new vertices default to R');
+ tap(3,100);tap(3,250);
  assert.equal(ui.graphSettings().nodes.length,4);assert.equal(ui.graphSettings().nodes[3].type,'N');change('drive',9);
  get('tool-edge').click();vertex(2).dispatch('pointerdown',{});vertex(3).dispatch('pointerdown',{});
  assert.equal(ui.graphSettings().edges.length,3);get('outputNode').click();
@@ -143,10 +146,57 @@ async function checkInputDiscovery(){
  get('undo').click();assert.equal(ui.graphSettings().nodes.length,4);assert.equal(ui.graphSettings().output,3);assert.equal(ui.graphSettings().nodes[3].drive,11);
  get('clear').click();assert.equal(ui.graphSettings().nodes.length,1);get('undo').click();assert.equal(ui.graphSettings().nodes.length,4);
  vertex(0).dispatch('dblclick',{});assert.equal(ui.graphSettings().nodes[0].type,'N');get('undo').click();
+ tap(0,1000);tap(0,1150);assert.equal(ui.graphSettings().nodes[0].type,'N','double tap switches R to N');
+ vertex(0).dispatch('dblclick',{timeStamp:1200});assert.equal(ui.graphSettings().nodes[0].type,'N','synthetic double click does not switch back');
+ tap(0,1500);tap(0,1650);assert.equal(ui.graphSettings().nodes[0].type,'R','double tap switches N to R');
+ get('undo').click();assert.equal(ui.graphSettings().nodes[0].type,'N','undo restores type');get('undo').click();
+ tap(0,2000);tap(0,2500);assert.equal(ui.graphSettings().nodes[0].type,'R','slow taps do not toggle');
+ tap(1,2600);assert.equal(ui.graphSettings().nodes[1].type,'N','taps on different vertices do not toggle');
+ vertex(0).dispatch('pointerdown',{pointerType:'touch',timeStamp:3000});drawing.dispatch('pointercancel',{pointerType:'touch',timeStamp:3010});tap(0,3100);
+ assert.equal(ui.graphSettings().nodes[0].type,'R','cancelled tap does not count');
+ vertex(0).dispatch('pointerdown',{pointerType:'touch',timeStamp:3200});drawing.dispatch('pointermove',{clientX:600,clientY:400});drawing.dispatch('pointerup',{pointerType:'touch',timeStamp:3230});tap(0,3300);
+ assert.equal(ui.graphSettings().nodes[0].type,'R','drag does not count as tap');
+ // Pointer capture sends pointerup and the resulting click to the SVG root,
+ // so a native dblclick listener on the vertex is insufficient on desktop.
+ tap(0,4000,{pointerType:'mouse',clientX:600,clientY:400});
+ tap(0,4200,{pointerType:'mouse',clientX:600,clientY:400});
+ assert.equal(ui.graphSettings().nodes[0].type,'N','captured mouse double click switches type without a vertex dblclick event');
+ vertex(0).dispatch('dblclick',{pointerType:'mouse',timeStamp:4250});
+ assert.equal(ui.graphSettings().nodes[0].type,'N','native mouse dblclick does not toggle twice');
+ get('undo').click();assert.equal(ui.graphSettings().nodes[0].type,'R','mouse type switch can be undone');
+ tap(0,5000,{pointerType:'mouse',clientX:600,clientY:400});
+ tap(0,5700,{pointerType:'mouse',clientX:600,clientY:400});
+ assert.equal(ui.graphSettings().nodes[0].type,'R','separate mouse clicks do not toggle');
  for(let i=4;i<24;i++)drawing.dispatch('pointerdown',{clientX:500,clientY:280});
  assert.equal(ui.graphSettings().nodes.length,24);drawing.dispatch('pointerdown',{clientX:500,clientY:280});assert.equal(ui.graphSettings().nodes.length,24);assert.match(get('graphStatus').textContent,/Maximum 24/);
  get('clear').click();vertex(0).dispatch('pointerdown',{});get('delete').click();assert.equal(ui.graphSettings().nodes.length,1);assert.match(get('graphStatus').textContent,/at least one/);
- change('preset','loop');assert.equal(ui.graphSettings().nodes.length,4);assert.equal(ui.graphSettings().edges.length,4);get('apply').click();
+ const beforePreset=ui.graphSettings();
+ change('preset','drive');let preset=ui.graphSettings();
+ assert.equal(preset.nodes.length,1);assert.equal(preset.nodes[0].type,'N');assert.equal(preset.nodes[0].drive,6);assert.equal(preset.edges.length,0);assert.equal(preset.input,0);assert.equal(preset.output,0);
+ for(const [name,delay] of [['reverb',25],['echo',100]]){
+  change('preset',name);preset=ui.graphSettings();assert.equal(preset.nodes.length,5);assert.equal(preset.edges.length,10);
+  assert(preset.nodes.every(node=>node.type==='N'&&node.drive===0));assert(preset.edges.every(edge=>edge.m===1));
+  assert.equal(preset.delay,delay);assert.equal(preset.feedback,.9);assert.equal(get('delayValue').textContent,delay+' ms');assert.equal(get('feedbackValue').textContent,'90%');
+  const audio=environment(48000);audio.processor.port.onmessage({data:{type:'graph',graph:preset}});
+  for(let i=0;i<100;i++)assert(processBlock(audio.processor,new Float32Array(128).fill(.1),parameters).every(Number.isFinite));
+ }
+ get('undo').click();assert.equal(ui.graphSettings().delay,25,'undo restores preset delay');
+ get('undo').click();assert.equal(ui.graphSettings().nodes.length,1);assert.equal(ui.graphSettings().feedback,.65);
+ get('undo').click();assert.deepEqual(ui.graphSettings(),beforePreset,'undo restores graph and network settings together');
+ change('preset','irregular-reverb');preset=ui.graphSettings();
+ assert.equal(preset.nodes.length,4);assert.equal(preset.edges.length,6);
+ assert(preset.nodes.every(node=>node.type==='N'&&node.drive===0));
+ assert.equal(new Set(preset.edges.map(edge=>edge.m)).size,6,'all irregular reverb edges have different delays');
+ assert.equal(new Set(preset.edges.map(edge=>[edge.a,edge.b].sort().join(':'))).size,6,'complete four-vertex graph');
+ assert.equal(preset.delay,70);assert.equal(preset.feedback,.9);
+ for(const rate of [44100,48000]){
+  const audio=environment(rate);audio.processor.port.onmessage({data:{graph:preset}});
+  assert(audio.messages.some(message=>message.type==='applied'));
+  for(let i=0;i<100;i++)assert(processBlock(audio.processor,new Float32Array(128).fill(.1),parameters).every(Number.isFinite));
+ }
+ get('undo').click();assert.deepEqual(ui.graphSettings(),beforePreset,'irregular preset can be undone');
+ change('preset','mixed');preset=ui.graphSettings();assert.equal(preset.nodes.length,4);assert.equal(preset.edges.length,4);
+ assert.equal(preset.nodes.filter(node=>node.type==='R').length,1);assert.equal(preset.nodes.find(node=>node.type==='R').freq,330);get('apply').click();
  assert.equal(ui.graphPathDelay({...ui.graphSettings(),edges:[]},48000),Infinity,'disconnected IN/OUT reported');
  console.log('hybrid editor: OK; add, connect, node/edge parameters, IN/OUT, live apply, drag, delete, undo, presets, limits');
  await ui.findInputs();

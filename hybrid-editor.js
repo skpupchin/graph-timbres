@@ -2,11 +2,11 @@
 /** @typedef {HybridNode & {x: number, y: number}} HybridVertex */
 /** @typedef {{nodes: HybridVertex[], edges: HybridEdge[], input: number, output: number}} HybridDrawing */
 /** @typedef {{kind: 'node'|'edge', i: number}} HybridSelection */
-/** @typedef {{i: number, startX: number, startY: number, moved: boolean}} HybridDrag */
+/** @typedef {{i: number, id: number, startX: number, startY: number, clientX: number, clientY: number, time: number, touch: boolean, moved: boolean}} HybridDrag */
 /** @typedef {{getGraph: () => HybridDrawing, replaceGraph: (graph: HybridDrawing) => void, refresh: () => void, refreshPanel: () => void}} HybridEditor */
 const hybridEditorText={
  en:{parameters:'Parameters',choose:'Select a vertex or edge.',node:'Vertex',edge:'Edge',type:'Type',resonator:'resonator',nonlinear:'saturation',frequency:'Note or frequency (Hz)',noteHelp:'For example E4, D#3 or Db3; A4 = 440 Hz. Frequencies: 50–4000 Hz.',damping:'Damping, 1/s',drive:'Drive',linear:'Drive 0 is linear.',input:'Set IN',output:'Set OUT',multiplier:'Delay multiplier',delay:'Delay in each direction',second:'Select the second vertex to add or remove an edge.',maximum:'Maximum 24 vertices.',minimum:'Keep at least one vertex.',invalid:'Invalid parameter. Check the range and ensure damping is less than 2π × frequency.',hint:'Tap empty space to add; drag vertices to move. Connect: tap two vertices. Double-tap a vertex to switch R/N.',connect:'Tap two vertices to add or remove an edge.',cleared:'Selection cleared.'},
- ru:{parameters:'Параметры',choose:'Выберите вершину или ребро на графе.',node:'Вершина',edge:'Ребро',type:'Тип',resonator:'резонатор',nonlinear:'преобразователь',frequency:'Нота или частота (Гц)',noteHelp:'Например, E4, D#3 или Db3; A4 = 440 Гц. Частоты: 50–4000 Гц.',damping:'Затухание, 1/с',drive:'Drive',linear:'Drive 0 — линейный режим.',input:'Сделать входом',output:'Сделать выходом',multiplier:'Множитель задержки',delay:'Задержка в каждую сторону',second:'Выберите вторую вершину для ребра.',maximum:'Максимум 24 вершины.',minimum:'Нужна хотя бы одна вершина.',invalid:'Недопустимый параметр. Проверьте диапазон; затухание должно быть меньше 2π × частота.',hint:'Пустое место: добавить вершину · перетаскивание: переместить · ребро: две вершины · двойной клик: R/N.',connect:'Нажмите на две вершины: добавить или убрать ребро.',cleared:'Выбор сброшен.'}
+ ru:{parameters:'Параметры',choose:'Выберите вершину или ребро на графе.',node:'Вершина',edge:'Ребро',type:'Тип',resonator:'резонатор',nonlinear:'преобразователь',frequency:'Нота или частота (Гц)',noteHelp:'Например, E4, D#3 или Db3; A4 = 440 Гц. Частоты: 50–4000 Гц.',damping:'Затухание, 1/с',drive:'Drive',linear:'Drive 0 — линейный режим.',input:'Сделать входом',output:'Сделать выходом',multiplier:'Множитель задержки',delay:'Задержка в каждую сторону',second:'Выберите вторую вершину для ребра.',maximum:'Максимум 24 вершины.',minimum:'Нужна хотя бы одна вершина.',invalid:'Недопустимый параметр. Проверьте диапазон; затухание должно быть меньше 2π × частота.',hint:'Пустое место: добавить вершину · перетаскивание: переместить · ребро: две вершины · двойной тап или клик: R/N.',connect:'Нажмите на две вершины: добавить или убрать ребро.',cleared:'Выбор сброшен.'}
 };
 /** @param {string} input @returns {number} */
 function hybridFrequency(input){
@@ -27,6 +27,14 @@ function createHybridVertex(type,x,y,freq){return {type,x,y,freq,damping:80,driv
 /** @param {string} name @returns {HybridDrawing} */
 function createHybridPreset(name){
  const r=(x,y,freq)=>createHybridVertex('R',x,y,freq),n=(x,y)=>createHybridVertex('N',x,y,440);
+ if(name==='drive')return {nodes:[{...n(500,280),drive:6}],edges:[],input:0,output:0};
+ if(name==='reverb'||name==='echo'||name==='irregular-reverb'){
+  const count=name==='irregular-reverb'?4:5,multipliers=[.7,1.1,1.3,1.7,1.9,2.3];
+  const nodes=Array.from({length:count},(_,i)=>{const angle=-Math.PI/2+i*2*Math.PI/count;return {...n(500+220*Math.cos(angle),280+200*Math.sin(angle)),drive:0};});
+  const edges=[];for(let a=0;a<nodes.length;a++)for(let b=a+1;b<nodes.length;b++)edges.push({a,b,m:name==='irregular-reverb'?multipliers[edges.length]:1});
+  return {nodes,edges,input:0,output:2};
+ }
+ if(name==='mixed')return {nodes:[{...n(250,280),drive:6},r(500,100,330),{...n(750,280),drive:6},{...n(500,460),drive:6}],edges:[{a:0,b:1,m:1},{a:1,b:2,m:1},{a:2,b:3,m:1},{a:3,b:0,m:1}],input:0,output:2};
  const presets={
   r:()=>[r(210,280,220),r(500,280,440),r(790,280,660)],
   n:()=>[n(210,280),n(500,280),n(790,280)],
@@ -40,6 +48,7 @@ function createHybridPreset(name){
  if(name==='loop')edges.push({a:3,b:0,m:1});
  return {nodes,edges,input:0,output:name==='loop'?2:nodes.length-1};
 }
+function hybridPresetSettings(name){const reverb=name==='reverb'||name==='irregular-reverb';return {delay:name==='irregular-reverb'?70:reverb?25:name==='echo'?100:18,feedback:reverb||name==='echo'?90:65,tone:10000};}
 /** @param {HybridDrawing} graph @returns {HybridDrawing} */
 function copyHybridDrawing(graph){return {nodes:graph.nodes.map(node=>({...node})),edges:graph.edges.map(edge=>({...edge})),input:graph.input,output:graph.output};}
 /**
@@ -50,20 +59,25 @@ function copyHybridDrawing(graph){return {nodes:graph.nodes.map(node=>({...node}
  * @param {(graph: HybridDrawing) => void} onChange
  * @param {(message: string) => void} onStatus
  * @param {typeof hybridEditorText.en} text
+ * @param {{get: () => object, set: (settings: object) => void}|null} network
  * @returns {HybridEditor}
  */
-function createHybridEditor(get,initialGraph,getDelay,onChange,onStatus,text){
- let graph=copyHybridDrawing(initialGraph),tool='select',edgeStart=null;
+function createHybridEditor(get,initialGraph,getDelay,onChange,onStatus,text,network=null){
+ let graph=copyHybridDrawing(initialGraph),tool='select',edgeStart=null,lastTap=null,lastTouchTime=-Infinity,lastToggleTime=-Infinity;
  /** @type {HybridSelection|null} */
  let selection=null;
  /** @type {HybridDrag|null} */
  let drag=null;
- /** @type {HybridDrawing[]} */
+ /** @type {{graph: HybridDrawing, settings: object|null}[]} */
  let history=[];
  const root=get('graph'),buttons=['select','add','edge'].map(name=>get('tool-'+name));
- function checkpoint(){history=[...history.slice(-59),copyHybridDrawing(graph)];}
- function changed(next){graph=copyHybridDrawing(next);onChange(copyHybridDrawing(graph));draw();}
+ function checkpoint(){history=[...history.slice(-59),{graph:copyHybridDrawing(graph),settings:network?{...network.get()}:null}];}
+ function changed(next){lastTap=null;graph=copyHybridDrawing(next);onChange(copyHybridDrawing(graph));draw();}
  function commit(next){checkpoint();changed(next);}
+ function toggleNode(i){
+  drag=null;edgeStart=null;selection={kind:'node',i};
+  commit({...graph,nodes:graph.nodes.map((vertex,index)=>index===i?{...vertex,type:vertex.type==='R'?'N':'R'}:vertex)});
+ }
  function selectNode(i){selection={kind:'node',i};for(const group of root.children)group.classList.toggle('selected',group.dataset.node!==undefined&&+group.dataset.node===i);get('delete').disabled=false;panel();}
  function connectNode(i){
   drag=null;selectNode(i);
@@ -96,16 +110,18 @@ function createHybridEditor(get,initialGraph,getDelay,onChange,onStatus,text){
    svgElement('text',{y:43,class:'badge'},group,`${i+1}${graph.input===i?' · IN':''}${graph.output===i?' · OUT':''}`);
    group.addEventListener('pointerdown',event=>{
     event.stopPropagation();
+    if(event.isPrimary===false){lastTap=null;drag=null;return;}
     if(event.button===2){event.preventDefault();drag=null;selectNode(i);removeSelection();return;}
     if(event.button!=null&&event.button!==0)return;
-    if(tool==='edge'||event.shiftKey){event.preventDefault();connectNode(i);return;}
+    if(tool==='edge'||event.shiftKey){lastTap=null;event.preventDefault();connectNode(i);return;}
     edgeStart=null;selectNode(i);
-    if(tool==='select'){event.preventDefault();drag={i,startX:node.x,startY:node.y,moved:false};root.setPointerCapture(event.pointerId);}
+    event.preventDefault();drag={i,id:event.pointerId,startX:node.x,startY:node.y,clientX:event.clientX,clientY:event.clientY,time:event.timeStamp??Date.now(),touch:event.pointerType==='touch',moved:false};root.setPointerCapture(event.pointerId);
    });
    group.addEventListener('dblclick',event=>{
     event.stopPropagation();if(event.shiftKey||tool==='edge'||(event.button!=null&&event.button!==0))return;
-    event.preventDefault();drag=null;edgeStart=null;selection={kind:'node',i};
-    commit({...graph,nodes:graph.nodes.map((vertex,index)=>index===i?{...vertex,type:vertex.type==='R'?'N':'R'}:vertex)});
+    const time=event.timeStamp??Date.now();
+    event.preventDefault();if(event.pointerType==='touch'||event.sourceCapabilities?.firesTouchEvents||time-lastTouchTime<600||time-lastToggleTime<600)return;
+    toggleNode(i);
    });
   });
   panel();get('undo').disabled=history.length===0;get('delete').disabled=selection===null;
@@ -153,33 +169,47 @@ function createHybridEditor(get,initialGraph,getDelay,onChange,onStatus,text){
  root.addEventListener('contextmenu',event=>event.preventDefault());
  root.addEventListener('pointerdown',event=>{
   if(event.target!==root||(event.button!==0&&event.button!==2))return;
-  event.preventDefault();drag=null;
+  event.preventDefault();drag=null;lastTap=null;
+  if(event.isPrimary===false)return;
   if(tool==='edge'){selection=null;edgeStart=null;draw();return;}
   if(graph.nodes.length>=24){onStatus(text.maximum);return;}
-  const position=point(event),type=event.button===2?'N':get('addType').value;
+  const position=point(event),type=event.button===2?'N':'R';
   const vertex=createHybridVertex(type,Math.max(30,Math.min(970,position.x)),Math.max(30,Math.min(510,position.y)),440);
   selection={kind:'node',i:graph.nodes.length};edgeStart=null;commit({...graph,nodes:[...graph.nodes,vertex]});
  });
  root.addEventListener('pointermove',event=>{
-  if(!drag)return;
+  if(!drag||drag.id!==event.pointerId)return;
+  const distance=Math.hypot(event.clientX-drag.clientX,event.clientY-drag.clientY),touch=drag.touch;
+  if(distance>10){lastTap=null;drag.touch=false;}
+  if(tool!=='select')return;
   const position=point(event);
-  if(!drag.moved&&Math.hypot(position.x-drag.startX,position.y-drag.startY)>3){checkpoint();drag={...drag,moved:true};}
+  if(!drag.moved&&(touch?distance>10:Math.hypot(position.x-drag.startX,position.y-drag.startY)>3)){checkpoint();drag={...drag,moved:true};}
   if(!drag.moved)return;
   const i=drag.i;
   graph={...graph,nodes:graph.nodes.map((vertex,index)=>index===i?{...vertex,x:Math.max(30,Math.min(970,position.x)),y:Math.max(30,Math.min(510,position.y))}:vertex)};
   draw();
  });
- const endDrag=()=>{if(drag?.moved)onChange(copyHybridDrawing(graph));drag=null;};
+ const endDrag=event=>{
+  if(!drag||drag.id!==event.pointerId)return;
+  const ended=drag;drag=null;
+  if(ended.moved){lastTap=null;onChange(copyHybridDrawing(graph));return;}
+  if(event.type!=='pointerup'){lastTap=null;return;}
+  const time=event.timeStamp??Date.now(),pointerType=event.pointerType||'mouse',interval=pointerType==='touch'?350:500;
+  if(pointerType==='touch')lastTouchTime=time;
+  if((pointerType==='touch'&&!ended.touch)||time-ended.time>interval||Math.hypot(event.clientX-ended.clientX,event.clientY-ended.clientY)>10){lastTap=null;return;}
+  if(lastTap&&lastTap.i===ended.i&&lastTap.pointerType===pointerType&&time-lastTap.time<=interval&&Math.hypot(event.clientX-lastTap.x,event.clientY-lastTap.y)<=24){lastTap=null;lastToggleTime=time;toggleNode(ended.i);}
+  else lastTap={i:ended.i,time,x:event.clientX,y:event.clientY,pointerType};
+ };
  root.addEventListener('pointerup',endDrag);root.addEventListener('pointercancel',endDrag);root.addEventListener('lostpointercapture',endDrag);
  for(const [index,name] of ['select','add','edge'].entries())buttons[index].onclick=()=>{
-  tool=name;edgeStart=null;drag=null;
+  tool=name;edgeStart=null;drag=null;lastTap=null;
   buttons.forEach((button,i)=>{button.classList.toggle('active',i===index);button.setAttribute('aria-pressed',String(i===index));});
   get('hint').textContent=tool==='edge'?text.connect:text.hint;draw();
  };
  get('delete').onclick=removeSelection;
- get('undo').onclick=()=>{if(!history.length)return;const previous=history[history.length-1];history=history.slice(0,-1);selection=null;edgeStart=null;drag=null;changed(previous);};
+ get('undo').onclick=()=>{if(!history.length)return;const previous=history[history.length-1];history=history.slice(0,-1);selection=null;edgeStart=null;drag=null;if(network&&previous.settings)network.set(previous.settings);changed(previous.graph);};
  get('clear').onclick=()=>{selection=null;edgeStart=null;drag=null;commit(createHybridPreset('single-r'));};
- get('preset').onchange=event=>{if(!event.target.value)return;const next=createHybridPreset(event.target.value);selection=null;edgeStart=null;drag=null;event.target.value='';commit(next);};
+ get('preset').onchange=event=>{if(!event.target.value)return;const name=event.target.value,next=createHybridPreset(name);checkpoint();if(network)network.set(hybridPresetSettings(name));selection=null;edgeStart=null;drag=null;event.target.value='';changed(next);};
  document.addEventListener('keydown',event=>{
   if(['INPUT','SELECT','TEXTAREA'].includes(document.activeElement.tagName)||document.activeElement.isContentEditable)return;
   if(event.key==='Escape'){edgeStart=null;selection=null;drag=null;draw();onStatus(text.cleared);}
