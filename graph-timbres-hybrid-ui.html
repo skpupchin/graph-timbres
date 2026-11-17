@@ -1,0 +1,509 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Тембры графов · Hybrid UI</title><meta name="description" content="Послушайте спектр лапласиана графа и отклик на удар по вершине."><link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23101820'/%3E%3Cpath d='M8 24L16 7L25 22Z' fill='none' stroke='%237ce4b0' stroke-width='2'/%3E%3Cg fill='%237ce4b0'%3E%3Ccircle cx='8' cy='24' r='3'/%3E%3Ccircle cx='16' cy='7' r='3'/%3E%3Ccircle cx='25' cy='22' r='3'/%3E%3C/g%3E%3C/svg%3E"><style>
+:root{color-scheme:dark;--bg:#10151c;--panel:#19222c;--line:#344351;--muted:#a4b4bf;--ink:#edf5f5;--green:#c8ef80;--orange:#ffa876;--blue:#79c9e6}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 system-ui,sans-serif}main{width:100%;margin:0}button,select,input{font:inherit}button,select{background:#263441;color:var(--ink);border:1px solid #405463;border-radius:7px;padding:8px}button{cursor:pointer}button:hover{border-color:var(--green)}button:disabled{opacity:.4;cursor:default}button:focus-visible,select:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--green);outline-offset:3px}button.primary{background:var(--green);color:#172213;border-color:var(--green);font-weight:700}button.secondary{background:#263441;color:var(--ink)}[hidden]{display:none!important}
+header{min-height:64px;display:flex;align-items:center;gap:9px;padding:10px 18px;border-bottom:1px solid var(--line);flex-wrap:wrap}header strong{font-size:17px;margin-right:12px;white-space:nowrap}header strong span{color:var(--green)}header .buttons{display:flex;gap:8px}header #status{margin-left:auto;font-size:12px;color:var(--green);max-width:360px}header #status:empty{display:none}#stop{min-width:56px}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 290px;min-height:510px}.workspace{display:flex;flex-direction:column;min-width:0;border-right:1px solid var(--line)}.workspace>.heading{display:flex;align-items:center;gap:12px;padding:12px 16px 0}.heading h2{font-size:15px;margin:0}.heading>span{margin-left:auto;color:var(--muted);font-size:12px}.workspace>.seg{margin:12px 16px 0;width:max-content}.seg{display:flex;gap:6px;flex-wrap:wrap}.seg button{font-size:12px;padding:7px 10px}.seg button[aria-pressed=true]{background:#405c45;border-color:var(--green);color:var(--ink)}.toolbar{display:flex;gap:7px;flex-wrap:wrap;margin:10px 16px 0}.toolbar button{padding:7px 10px}.workspace>#listenTools{margin-top:10px}#graphHint{padding:0 16px;margin:10px 0 0}#graph{display:block;width:calc(100% - 32px);max-width:1000px;height:auto;aspect-ratio:2 / 1;flex:0 0 auto;min-height:0;margin:16px auto;border:1px solid var(--line);border-radius:7px;background:radial-gradient(circle at 50% 50%,#202d36,#151e27);touch-action:none;user-select:none}#graph:focus-visible{outline:2px solid var(--green);outline-offset:-3px}#graph line{stroke:#526b7a}#graph .node{cursor:pointer}#graph text{fill:var(--ink);font-size:14px;pointer-events:none;text-anchor:middle;dominant-baseline:central}.legend{display:flex;gap:20px;flex-wrap:wrap;padding:10px 16px;border-top:1px solid var(--line);color:var(--muted);font-size:12px}.dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--green);margin-right:7px}.dot.orange{background:var(--orange)}
+.controls{padding:18px;min-width:0;background:var(--bg);display:flex;flex-direction:column;gap:17px}.controls h2{font-size:15px;margin:0}.side-title{padding-bottom:12px;border-bottom:1px solid var(--line)}label,.label{display:block;color:#d4e0e2;font-size:12px;margin-bottom:6px}input[type=range]{width:100%;accent-color:var(--green);margin:0}.readout{float:right;color:var(--green);font-variant-numeric:tabular-nums}.note{font-size:12px;color:var(--muted);margin:6px 0 0;line-height:1.6}.controls select{width:100%}.model-picker{padding-bottom:14px;border-bottom:1px solid var(--line)}.controls .seg{display:grid;grid-template-columns:1fr 1fr}.controls #soundModes{grid-template-columns:1fr}.controls #soundModes button{text-align:left;padding:8px 10px}.controls #modeNote{margin-top:-8px}.controls input[type=file]{width:100%;font-size:12px;color:var(--muted)}#audioFile::file-selector-button{background:#263441;color:var(--ink);border:1px solid #405463;border-radius:6px;padding:7px;margin-right:6px;cursor:pointer}#resonatorControls>label:not(:first-child){margin-top:14px}.edge-section{border-top:1px solid var(--line);padding-top:14px}.edge-section:has(>[hidden]){display:none}#edgeWeightRows input{width:80px;max-width:100%;text-align:right}#edgeWeightRows button{padding:5px 7px;white-space:nowrap}input[aria-invalid=true]{border-color:var(--orange)}
+.bottom{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(300px,1fr);gap:1px;background:var(--line);border-top:1px solid var(--line)}.box{background:var(--panel);padding:14px 18px;min-width:0}.box h2{font-size:15px;margin:0 0 8px}.chart{display:block;width:100%;height:200px}.stats{display:flex;gap:20px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin:10px 0}.stats strong{color:var(--ink)}details{color:var(--muted)}summary{cursor:pointer;color:#d6e4e7;font-size:12px}.tablewrap{overflow:auto;max-height:230px;margin-top:12px}table{width:100%;border-collapse:collapse;font-size:12px;text-align:right}th,td{padding:7px 6px;border-bottom:1px solid var(--line)}th{color:var(--muted);font-weight:500}th:first-child,td:first-child{text-align:left}.search-panel>summary{font-size:15px;font-weight:600}.search-content{display:grid;gap:14px;padding-top:12px}.search-content input,.search-content select,#edgeWeightRows input{background:#263441;color:var(--ink);border:1px solid #405463;border-radius:6px;padding:7px}.search-content input,.search-content select{width:100%}.search-content .pair{display:grid;grid-template-columns:1fr 1fr;gap:12px}.search-content .buttons{display:flex;gap:8px}.search-content progress{width:100%;accent-color:var(--green)}.search-content a{color:var(--green)}#searchApply{margin-top:12px}#searchResult p{overflow-wrap:anywhere}.explain{padding:14px 18px;border-top:1px solid var(--line)}.explain p{max-width:1050px;font-size:13px}.formula{color:var(--green);font-family:monospace}.compact-help{margin-top:8px}.compact-help p{margin-top:6px}a{color:var(--green)}
+#graph circle[fill="#7ce4b0"],#chart rect[fill="#7ce4b0"]{fill:var(--green)}#graph circle[stroke="#ffba77"]{stroke:var(--orange)}
+@media(min-width:1400px){.layout{grid-template-columns:minmax(0,1fr) 310px}.controls{padding:20px}}
+@media(max-width:850px){.layout{grid-template-columns:1fr}.workspace{border-right:0}.controls{border-top:1px solid var(--line);display:grid;grid-template-columns:1fr 1fr;gap:16px}.controls>.side-title,.controls>.model-picker,.controls>#modeNote,.controls>#resonatorControls,.controls>.edge-section{grid-column:1/-1}.controls #soundModes{grid-template-columns:repeat(3,minmax(0,1fr))}.controls>div:has(>#soundModes){grid-column:1/-1}.bottom{grid-template-columns:1fr}#graph{height:auto;min-height:0}header #status{max-width:none;width:100%;margin:0}}
+@media(max-width:520px){header{padding:12px 14px}header strong{width:100%;margin-bottom:3px}header button{font-size:12px}header #download{margin-left:0}.controls{display:flex;padding:16px}.controls #soundModes{grid-template-columns:1fr}.box{padding:14px}.stats{gap:10px}#graph{width:calc(100% - 28px);height:auto;min-height:0;margin:14px auto}.chart{height:auto;aspect-ratio:3.2}.search-content .pair{grid-template-columns:1fr}}
+</style></head><body><main><header><strong><span>◉</span> ТЕМБРЫ / ГРАФОВ</strong><div class="buttons full"><button id="play" class="primary">▶ Послушать</button><button id="stop" class="secondary" disabled>Стоп</button></div><button id="download" class="secondary full" title="16-битный WAV, моно, 44,1 кГц">Скачать WAV</button><button id="downloadProcessed" class="secondary full" title="Обработанный 16-битный WAV с текущими настройками" hidden disabled>Скачать обработанный WAV</button><div id="status" class="full" role="status" aria-live="polite"></div></header><div class="layout"><section class="workspace"><div class="heading"><h2 id="graphTitle">Ваш граф</h2><span id="graphMeta"></span></div><div class="seg" role="group" aria-label="Режим работы"><button id="edit" aria-pressed="false">Редактировать</button><button id="hear" aria-pressed="true">Слушать</button></div><div id="editTools" class="toolbar" hidden><button id="undo" class="secondary">Отменить</button><button id="clear" class="secondary">Очистить</button></div><div id="listenTools" class="seg" role="group" aria-label="Выбор точки" hidden><button id="strikeTool" aria-pressed="true">Куда ударить</button><button id="listenTool" aria-pressed="false">Где слушать</button></div><p id="graphHint" class="note"></p><svg id="graph" viewBox="0 0 600 300" tabindex="0" role="group" aria-label="Вершины и рёбра графа"></svg><div class="legend" id="legend" hidden><span><i class="dot"></i>Удар</span><span><i class="dot orange"></i>Прослушивание</span></div></section><aside class="controls" aria-label="Настройки звука"><h2 class="side-title">Настройки звука</h2><div class="full"><span class="label">Способ озвучивания</span><div id="soundModes" class="seg" role="group" aria-label="Способ озвучивания"><button id="spectrum" aria-pressed="true">Весь спектр</button><button id="response" aria-pressed="false">Отклик на удар</button><button id="resonator" aria-pressed="false">Резонатор</button></div></div><p id="modeNote" class="note full">Равная амплитуда у каждой моды. Кратные частоты складываются.</p><div id="resonatorControls" class="full" hidden><label for="audioFile">Аудиофайл</label><input id="audioFile" type="file" accept="audio/*,.wav,.mp3,.ogg,.m4a,.flac"><p id="fileName" class="note">Выберите файл, поддерживаемый браузером.</p><label for="mix">Dry/Wet <output id="mixOut" class="readout">50%</output></label><input id="mix" type="range" min="0" max="100" value="50"><p class="note">0% — исходный файл, 100% — только резонатор. Граф и параметры применяются при следующем запуске.</p></div><div class="full"><label for="scale">Общий масштаб a <output id="scaleOut" class="readout">220 Гц</output></label><input id="scale" type="range" min="80" max="600" step="10" value="220"><p class="note">f = a√λ. При смене графа a сохраняется.</p></div><div><label for="decay">Время затухания τ <output id="decayOut" class="readout">1.0 с</output></label><input id="decay" type="range" min="0.2" max="2" step="0.1" value="1"></div><div><label for="volume">Громкость <output id="volumeOut" class="readout">35%</output></label><input id="volume" type="range" min="0" max="80" value="35"></div><div class="edge-section"><details id="edgeWeights" hidden><summary>Жёсткости пружин</summary><p id="edgeWeightHelp" class="note">В режиме «Редактировать» задайте жёсткость больше нуля. Enter или выход из поля применяет значение; «Отменить» возвращает прежнее. Толщина ребра показывает относительную жёсткость.</p><p id="edgeWeightStatus" class="note" role="status" aria-live="polite"></p><div class="tablewrap"><table><thead><tr><th>Ребро</th><th>Жёсткость</th></tr></thead><tbody id="edgeWeightRows"></tbody></table></div></details></div></aside></div><div class="bottom"><section class="box spectrum-box"><div class="heading"><h2>Что прозвучит</h2></div><svg id="chart" class="chart" viewBox="0 0 640 200" role="img" aria-label="Частоты и относительные амплитуды звука"></svg><div class="stats"><span>Нижняя частота: <strong id="low"></strong></span><span>Звучащих частот: <strong id="active"></strong></span></div><p id="chartNote" class="note">Высота столбика — |амплитуда| до нормировки громкости. Совпадающие частоты объединены.</p><details><summary>Числа: λ, частоты и амплитуды</summary><div class="tablewrap"><table><thead><tr><th>λ</th><th>Кратность</th><th>Гц</th><th>Амплитуда</th></tr></thead><tbody id="rows"></tbody></table></div></details></section><section class="box search-box" aria-label="Поиск графа"><details class="panel search-panel" id="searchPanel"><summary>Найти граф по частотам</summary><div class="search-content">
+<p class="note">По заданным отношениям сразу построим граф с точно такими частотами. Жёсткости пружин будут разными; масса каждой вершины равна 1. Высота звука задаётся общим масштабом a.</p>
+<div><label for="searchSource">Что искать</label><select id="searchSource"><option value="ratios">Точные отношения частот</option><option value="graph">Похожий на текущий граф</option></select></div>
+<div id="searchRatiosWrap"><label for="searchRatios">Отношения частот</label><input id="searchRatios" type="text" value="1:1.25:1.5" maxlength="256" spellcheck="false" autocomplete="off" aria-describedby="searchRatiosHelp searchRatiosStatus"><p id="searchRatiosHelp" class="note">Например, 1:1.25:1.5 или 1 5/4 3/2. Десятичная точка, дроби, разделители: пробел, двоеточие или запятая. От 1 до 11 частот, диапазон до 8:1. Повтор частоты задаёт её кратность.</p><p id="searchRatiosStatus" class="note" role="status" aria-live="polite"></p></div>
+<p id="searchReference" class="note">При запуске сохраняем заданные отношения. Граф выше можно продолжать редактировать.</p>
+<div class="pair" id="searchParameters" hidden><div><label for="searchSize">Вершин в новом графе</label><input id="searchSize" type="number" min="2" max="12" step="1" value="4"></div><div><label for="searchSeconds">Искать, секунд</label><input id="searchSeconds" type="number" min="1" max="30" step="1" value="8"></div></div>
+<div class="buttons"><button class="primary" id="searchStart">Построить граф</button><button class="secondary" id="searchStop" disabled hidden>Остановить</button></div>
+<progress id="searchProgress" max="1" value="0" hidden aria-label="Время поиска"></progress><p id="searchStatus" class="note" role="status" aria-live="polite">Задайте частоты и нажмите «Построить граф».</p>
+<div id="searchResult" hidden><p>Найденные отношения: <strong id="searchFound"></strong></p><p class="note" id="searchDistanceRow">Расстояние спектров: <span id="searchDistance"></span> — меньше лучше.</p><p class="note" id="searchAccuracy" hidden></p><div class="tablewrap"><table><thead><tr><th>Цель</th><th id="searchFrequencyHeading">Ближайшая частота</th><th>Ошибка, центы</th></tr></thead><tbody id="searchCompare"></tbody></table></div><p class="note" id="searchResultNote">Отношения частот не задают амплитуды отклика на удар.</p><button id="searchApply" class="secondary" disabled>Загрузить найденный граф</button></div>
+<details><summary>Как строится граф</summary><p class="note">Для заданных отношений строим полный граф на одну вершину больше, чем задано частот. По теореме 2.5 Fallat–Gupta–Lin положительные жёсткости рёбер дают собственные значения, равные квадратам отношений частот, и одну нулевую моду. Построение выполняется сразу; частоты проверяем по полученным рёбрам. <a href="https://arxiv.org/html/2411.00292v2" target="_blank" rel="noopener noreferrer">Описание конструкции</a>.</p><p class="note">Для варианта «Похожий на текущий граф» ищем другой граф с единичной жёсткостью рёбер. Адаптация метода Ipsen–Mikhailov (2002): частоты √λ сглаживаются лоренцевыми пиками ширины γ = 0.08; сравниваем нормированные плотности по L²-расстоянию. Нижняя положительная частота каждого спектра приведена к 1, поэтому ищем отношения. Интеграл вычисляется численно на конечном интервале. Каждая положительная мода имеет равный вес в плотности.</p><p class="note">Случайно меняем связи одной вершины. Улучшение принимается всегда, ухудшение — с вероятностью exp(−Δε/(εθ)), θ = 0.04. Несвязные варианты отклоняются; каждые 1000 изменений начинаем новый случайный поиск, сохраняя лучший результат. Совпадение сглаженных спектров не гарантирует одинаковый тембр при ударе.</p><p class="note"><a href="https://arxiv.org/abs/nlin/0111023" target="_blank" rel="noopener noreferrer">Ipsen &amp; Mikhailov — Evolutionary reconstruction of networks</a> · <a href="библиотека/README.md">Обзор литературы</a></p></details>
+</div></details></section></div><details class="panel explain"><summary>Какая модель здесь звучит?</summary><p>Вершины имеют единичную массу, рёбра задают жёсткости пружин. Нарисованные вручную рёбра имеют жёсткость 1; граф по заданным частотам использует рассчитанные положительные жёсткости. В L = D − A матрица A содержит жёсткости рёбер, D — их суммы у вершин. Лапласиан описывает массы и пружины: ü + Lu = 0. Собственные значения λ дают частоты f = a√λ. Все графы используют один масштаб a; нижние ноты отдельно не выравниваются.</p><p><b>Весь спектр:</b> каждой положительной моде назначена амплитуда 1 и одинаковая начальная фаза. Частота кратности m получает суммарную амплитуду m. Это условное озвучивание спектра.</p><p><b>Отклик:</b> начальное смещение равно нулю, единичный импульс скорости приложен к вершине i, слушаем смещение вершины j. Для ортонормированных собственных векторов амплитуда моды равна vₖ(i)vₖ(j)/(2πfₖ). При кратном собственном значении суммируются вклады всего собственного подпространства; результат не зависит от выбранного базиса.</p><p class="formula">s(t) = e⁻ᵗ/τ ∑ Aₖ sin(2πfₖt)</p><p>Экспонента добавлена как огибающая, а не как точное решение системы с трением. Нулевая мода исключена. В режимах спектра и удара каждый сигнал нормируется по пику перед применением общей громкости. В резонаторе отклик сохраняет относительные амплитуды разных графов и ограничен восемью секундами. Частоты выше предела Найквиста не синтезируются. Это озвучивание математической модели, а не расчёт излучения реальных пружин в воздух.</p></details></main><script>'use strict';
+function makeGraph(shape,n){if(shape==='grid')n=9;const edges=[];if(shape==='path'||shape==='cycle')for(let i=1;i<n;i++)edges.push([i-1,i]);if(shape==='cycle')edges.push([n-1,0]);if(shape==='star')for(let i=1;i<n;i++)edges.push([0,i]);if(shape==='complete')for(let i=0;i<n;i++)for(let j=i+1;j<n;j++)edges.push([i,j]);if(shape==='grid')for(let i=0;i<9;i++){if(i%3<2)edges.push([i,i+1]);if(i<6)edges.push([i,i+3]);}const L=Array.from({length:n},()=>Array(n).fill(0));for(const [i,j]of edges){L[i][i]++;L[j][j]++;L[i][j]--;L[j][i]--;}return{n,edges,L};}
+function eigen(L){const n=L.length,A=L.map(r=>r.slice()),V=Array.from({length:n},(_,i)=>Array.from({length:n},(_,j)=>+(i===j)));for(let iter=0;iter<100*n*n;iter++){let p=0,q=1,max=0;for(let i=0;i<n;i++)for(let j=i+1;j<n;j++)if(Math.abs(A[i][j])>max){max=Math.abs(A[i][j]);p=i;q=j;}if(max<1e-12)break;const angle=.5*Math.atan2(2*A[p][q],A[q][q]-A[p][p]),c=Math.cos(angle),s=Math.sin(angle),app=A[p][p],aqq=A[q][q],apq=A[p][q];for(let k=0;k<n;k++)if(k!==p&&k!==q){const akp=A[k][p],akq=A[k][q];A[k][p]=A[p][k]=c*akp-s*akq;A[k][q]=A[q][k]=s*akp+c*akq;}A[p][p]=c*c*app-2*s*c*apq+s*s*aqq;A[q][q]=s*s*app+2*s*c*apq+c*c*aqq;A[p][q]=A[q][p]=0;for(let k=0;k<n;k++){const vkp=V[k][p],vkq=V[k][q];V[k][p]=c*vkp-s*vkq;V[k][q]=s*vkp+c*vkq;}}return Array.from({length:n},(_,k)=>({lambda:Math.max(0,A[k][k]),v:V.map(r=>r[k])})).sort((a,b)=>a.lambda-b.lambda);}
+function partials(modes,mode,i,j,a){const groups=[];for(const m of modes){if(m.lambda<1e-8)continue;let g=groups.at(-1);if(!g||Math.abs(g.lambda-m.lambda)>1e-7){g={lambda:m.lambda,f:a*Math.sqrt(m.lambda),multiplicity:0,amplitude:0};groups.push(g);}g.multiplicity++;g.amplitude+=mode==='spectrum'?1:m.v[i]*m.v[j]/(2*Math.PI*g.f);}return groups;}
+function synth(groups,sampleRate,tau){const length=Math.ceil(6*tau*sampleRate),signal=new Float32Array(length);const valid=groups.filter(g=>g.f<sampleRate/2&&Math.abs(g.amplitude)>1e-12);let peak=0;for(let m=0;m<length;m++){const t=m/sampleRate;let x=0;for(const g of valid)x+=g.amplitude*Math.sin(2*Math.PI*g.f*t);const fade=Math.min(1,(length-1-m)/(.04*sampleRate));signal[m]=x*Math.exp(-t/tau)*Math.max(0,fade);peak=Math.max(peak,Math.abs(signal[m]));}if(peak>0)for(let m=0;m<length;m++)signal[m]/=peak;return{signal,peak};}
+// Sample the same damped velocity-impulse response without per-graph peak normalization.
+// The fixed 220 Hz reference converts the continuous response to a useful discrete convolution gain.
+function buildGraphImpulseResponse(groups,sampleRate,tau){
+  const duration=Math.min(8,6*tau),length=Math.max(1,Math.ceil(duration*sampleRate));
+  const signal=new Float32Array(length),valid=groups.filter(g=>g.f>0&&g.f<sampleRate/2&&Math.abs(g.amplitude)>1e-12);
+  const calibration=2*Math.PI*220/sampleRate;
+  for(let n=0;n<length;n++){
+    const t=n/sampleRate,fade=Math.min(1,(length-1-n)/(.04*sampleRate));
+    let value=0;
+    for(const g of valid)value+=g.amplitude*Math.sin(2*Math.PI*g.f*t);
+    signal[n]=value*Math.exp(-t/tau)*Math.max(0,fade)*calibration;
+  }
+  return signal;
+}
+function wavBlob(signal,sampleRate){const bytes=new ArrayBuffer(44+signal.length*2),view=new DataView(bytes);function write(offset,value){for(let i=0;i<value.length;i++)view.setUint8(offset+i,value.charCodeAt(i));}write(0,'RIFF');view.setUint32(4,36+signal.length*2,true);write(8,'WAVE');write(12,'fmt ');view.setUint32(16,16,true);view.setUint16(20,1,true);view.setUint16(22,1,true);view.setUint32(24,sampleRate,true);view.setUint32(28,sampleRate*2,true);view.setUint16(32,2,true);view.setUint16(34,16,true);write(36,'data');view.setUint32(40,signal.length*2,true);for(let i=0;i<signal.length;i++)view.setInt16(44+i*2,Math.max(-1,Math.min(1,signal[i]))*32767,true);return new Blob([bytes],{type:'audio/wav'});}
+function wavBlobChannels(channels,sampleRate){
+  if(!channels.length||channels.length>2||channels.some(channel=>channel.length!==channels[0].length))throw new RangeError('Для WAV нужны один или два канала одинаковой длины.');
+  const count=channels.length,length=channels[0].length,dataBytes=length*count*2;
+  if(dataBytes>0xffffffff-36)throw new RangeError('Аудиофайл слишком длинный для WAV.');
+  const bytes=new ArrayBuffer(44+dataBytes),view=new DataView(bytes);
+  function write(offset,value){for(let i=0;i<value.length;i++)view.setUint8(offset+i,value.charCodeAt(i));}
+  write(0,'RIFF');view.setUint32(4,36+dataBytes,true);write(8,'WAVE');write(12,'fmt ');view.setUint32(16,16,true);view.setUint16(20,1,true);view.setUint16(22,count,true);view.setUint32(24,sampleRate,true);view.setUint32(28,sampleRate*count*2,true);view.setUint16(32,count*2,true);view.setUint16(34,16,true);write(36,'data');view.setUint32(40,dataBytes,true);
+  for(let frame=0;frame<length;frame++)for(let channel=0;channel<count;channel++)view.setInt16(44+(frame*count+channel)*2,Math.max(-1,Math.min(1,channels[channel][frame]))*32767,true);
+  return new Blob([bytes],{type:'audio/wav'});
+}
+/** @typedef {[number, number]} UnitEdge */
+/** @typedef {[number, number, number]} WeightedEdge */
+/** @typedef {UnitEdge | WeightedEdge} Edge */
+/** @typedef {{n: number, edges: WeightedEdge[], ratios: number[], maximumErrorCents: number}} WeightedGraphMatch */
+/** @param {Edge} edge @returns {number} */
+function edgeWeight(edge){
+  if(edge.length===2)return 1;
+  if(edge.length!==3||!Number.isFinite(edge[2])||edge[2]<=0)throw new RangeError('Жёсткость ребра '+JSON.stringify(edge)+' должна быть конечным числом больше нуля.');
+  return edge[2];
+}
+/** Return new edges with one spring strength changed, preserving every other edge.
+ * @param {Edge[]} edges
+ * @param {number} index
+ * @param {number} weight
+ * @returns {Edge[]}
+ */
+function replaceEdgeWeight(edges,index,weight){
+  if(!Number.isInteger(index)||index<0||index>=edges.length)throw new RangeError('Ребро с индексом '+index+' отсутствует в графе.');
+  /** @type {WeightedEdge} */
+  const updated=[edges[index][0],edges[index][1],weight];
+  edgeWeight(updated);
+  return edges.map((edge,i)=>i===index?updated:edge);
+}
+function removeVertexEdges(edges,vertex){return edges.filter(([i,j])=>i!==vertex&&j!==vertex).map(edge=>[edge[0]>vertex?edge[0]-1:edge[0],edge[1]>vertex?edge[1]-1:edge[1],edgeWeight(edge)]);}
+/** @param {number} n @param {Edge[]} edges @returns {number[][]} */
+function graphLaplacian(n,edges){
+  const L=Array.from({length:n},()=>Array(n).fill(0));
+  for(const edge of edges){
+    const [i,j]=edge,weight=edgeWeight(edge);
+    if(!Number.isInteger(i)||!Number.isInteger(j)||i<0||j<0||i>=n||j>=n||i===j)throw new RangeError('Некорректные вершины ребра '+JSON.stringify(edge)+' для графа на '+n+' вершинах.');
+    L[i][i]+=weight;L[j][j]+=weight;L[i][j]-=weight;L[j][i]-=weight;
+  }
+  return L;
+}
+function connectedGraph(n,edges){
+  const neighbours=Array.from({length:n},()=>[]);
+  for(const [a,b]of edges){neighbours[a].push(b);neighbours[b].push(a);}
+  const seen=new Set([0]),queue=[0];
+  for(let p=0;p<queue.length;p++)for(const v of neighbours[queue[p]])if(!seen.has(v)){seen.add(v);queue.push(v);}
+  return seen.size===n;
+}
+function modalRatios(n,edges){
+  const frequencies=eigen(graphLaplacian(n,edges)).filter(m=>m.lambda>1e-8).map(m=>Math.sqrt(m.lambda));
+  return frequencies.map(f=>f/frequencies[0]);
+}
+/** Parse positive frequency ratios, preserving multiplicity and normalizing the lowest to 1.
+ * @param {string} text
+ * @returns {number[]}
+ */
+function parseFrequencyRatios(text){
+  if(!text.trim())throw new RangeError('Введите хотя бы одно отношение частот, например 1:1.25:1.5.');
+  const tokens=text.trim().split(/[\s,:;]+/);
+  if(tokens.length>11)throw new RangeError('Можно задать не больше 11 частот для графа до 12 вершин.');
+  const numberPattern=/^(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/;
+  const values=tokens.map(token=>{
+    const parts=token.split('/');
+    if(parts.length>2||parts.some(part=>!numberPattern.test(part)))throw new SyntaxError('Некорректное отношение «'+token+'». Используйте положительное число или дробь, например 5/4.');
+    const value=Number(parts[0])/(parts.length===2?Number(parts[1]):1);
+    if(!Number.isFinite(value)||value<=0)throw new RangeError('Отношение «'+token+'» должно быть конечным числом больше нуля; знаменатель не может быть нулём.');
+    return value;
+  }).sort((a,b)=>a-b);
+  const ratios=values.map(value=>value/values[0]);
+  if(ratios.at(-1)>8)throw new RangeError('Отношение верхней частоты к нижней должно быть не больше 8.');
+  return ratios;
+}
+/** Construct the Laplacian using Fallat–Gupta–Lin, Theorem 2.5 (https://arxiv.org/html/2411.00292v2).
+ * @param {number[]} eigenvalues Sorted positive eigenvalues, excluding the zero mode.
+ * @returns {number[][]}
+ */
+function laplacianFromSpectrum(eigenvalues){
+  if(eigenvalues.length===1){const weight=eigenvalues[0]/2;return [[weight,-weight],[-weight,weight]];}
+  const n=eigenvalues.length+1,rho=eigenvalues[0]/n;
+  const smaller=laplacianFromSpectrum(eigenvalues.slice(1).map(value=>value-rho));
+  return Array.from({length:n},(_,i)=>Array.from({length:n},(_,j)=>
+    i===n-1?(j===n-1?rho*(n-1):-rho):j===n-1?-rho:smaller[i][j]+(i===j?rho:0)));
+}
+/** Realize normalized frequency ratios and verify the spectrum of the resulting edges.
+ * @param {number[]} target Sorted frequency ratios starting at 1, including multiplicity.
+ * @returns {WeightedGraphMatch}
+ */
+function constructWeightedGraph(target){
+  if(!target.length||target.length>11||target[0]!==1||target.some((r,i)=>!Number.isFinite(r)||r<1||r>8||i>0&&r<target[i-1]))throw new RangeError('Задайте от 1 до 11 нормированных отношений частот от 1 до 8, по возрастанию.');
+  const n=target.length+1,L=laplacianFromSpectrum(target.map(r=>r*r));
+  /** @type {WeightedEdge[]} */
+  const edges=[];
+  for(let i=0;i<n;i++)for(let j=i+1;j<n;j++)edges.push([i,j,-L[i][j]]);
+  const ratios=modalRatios(n,edges);
+  if(ratios.length!==target.length)throw new Error('Построенный граф содержит '+ratios.length+' мод вместо '+target.length+'.');
+  const maximumErrorCents=Math.max(...target.map((r,i)=>Math.abs(1200*Math.log2(ratios[i]/r))));
+  if(!Number.isFinite(maximumErrorCents)||maximumErrorCents>1e-6)throw new Error('Не удалось воспроизвести заданные частоты: максимальная ошибка '+maximumErrorCents+' центов.');
+  return {n,edges,ratios,maximumErrorCents};
+}
+// Ipsen–Mikhailov eqs. (1),(2). Exact half-line normalization; finite quadrature.
+function makeSpectralMetric(target,n){
+  const gamma=.08,count=768;
+  const bound=Math.sqrt(n/(2*(1-Math.cos(Math.PI/n))));
+  const upper=Math.max(bound,target.at(-1))+8*gamma,step=upper/count;
+  function density(frequencies){
+    const normalization=frequencies.reduce((sum,f)=>sum+Math.PI/2+Math.atan(f/gamma),0);
+    const values=new Float64Array(count);
+    for(let k=0;k<count;k++){
+      const x=(k+.5)*step;
+      for(const f of frequencies)values[k]+=gamma/((x-f)**2+gamma**2)/normalization;
+    }
+    return values;
+  }
+  const goal=density(target);
+  return frequencies=>{
+    const actual=density(frequencies);let sum=0;
+    for(let k=0;k<count;k++)sum+=(actual[k]-goal[k])**2;
+    return Math.sqrt(sum*step);
+  };
+}
+function isomorphicGraphs(n,a,m,b){
+  if(n!==m||a.length!==b.length)return false;
+  const A=graphLaplacian(n,a),B=graphLaplacian(n,b),da=A.map((r,i)=>r[i]),db=B.map((r,i)=>r[i]);
+  if(da.slice().sort((a,b)=>a-b).join()!==db.slice().sort((a,b)=>a-b).join())return false;
+  const options=da.map((degree,i)=>db.map((d,j)=>d===degree?j:-1).filter(j=>j>=0));
+  const order=Array.from({length:n},(_,i)=>i).sort((i,j)=>options[i].length-options[j].length||da[j]-da[i]);
+  const map=Array(n).fill(-1),used=Array(n).fill(false);
+  function visit(depth){
+    if(depth===n)return true;
+    const i=order[depth];
+    for(const j of options[i])if(!used[j]){
+      let valid=true;
+      for(let p=0;p<depth;p++){const k=order[p];if(A[i][k]!==B[j][map[k]]){valid=false;break;}}
+      if(valid){map[i]=j;used[j]=true;if(visit(depth+1))return true;used[j]=false;map[i]=-1;}
+    }
+    return false;
+  }
+  return visit(0);
+}
+function searchWorker(){
+  self.onmessage=({data})=>{
+    try{
+      const {n,target,seconds,original}=data;
+      if(!Number.isInteger(n)||n<2||n>12||!Array.isArray(target)||!target.length||target.length>11||target[0]!==1||target.some((x,i)=>!Number.isFinite(x)||x<1||x>8||i>0&&x<target[i-1])||!Number.isFinite(seconds)||seconds<1||seconds>30)throw new RangeError('Некорректные параметры поиска.');
+      const metric=makeSpectralMetric(target,Math.max(n,original===null?target.length+1:original.n)),start=performance.now();
+      let best=null,steps=0,lastReport=0,current=null,error=Infinity;
+      function evaluate(edges){const ratios=modalRatios(n,edges);return{edges,ratios,error:metric(ratios),n,method:'search'};}
+      function consider(candidate){if((!best||candidate.error<best.error)&&(original===null||!isomorphicGraphs(n,candidate.edges,original.n,original.edges)))best=candidate;}
+      function fresh(){
+        const edges=[];
+        for(let i=1;i<n;i++)edges.push([i,Math.floor(Math.random()*i)]);
+        const probability=Math.random()*.6;
+        for(let i=0;i<n;i++)for(let j=i+1;j<n;j++)if(Math.random()<probability&&!edges.some(([a,b])=>a===i&&b===j||a===j&&b===i))edges.push([i,j]);
+        return evaluate(edges);
+      }
+      if(original!==null&&original.n===n&&connectedGraph(n,original.edges))current=evaluate(original.edges);
+      else current=fresh();
+      consider(current);error=current.error;
+      self.postMessage({type:'progress',best,steps,elapsed:0});
+      while(performance.now()-start<seconds*1000&&(!best||best.error>1e-9)){
+        if(steps>0&&steps%1000===0){current=fresh();error=current.error;consider(current);}
+        const vertex=Math.floor(Math.random()*n),degree=1+Math.floor(Math.random()*(n-1));
+        const candidates=Array.from({length:n},(_,i)=>i).filter(i=>i!==vertex);
+        for(let i=candidates.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[candidates[i],candidates[j]]=[candidates[j],candidates[i]];}
+        const edges=current.edges.filter(([a,b])=>a!==vertex&&b!==vertex).concat(candidates.slice(0,degree).map(i=>[vertex,i]));
+        steps++;
+        if(connectedGraph(n,edges)){
+          const candidate=evaluate(edges),delta=candidate.error-error;
+          consider(candidate);
+          if(delta<=0||Math.random()<Math.exp(-delta/(Math.max(error,1e-12)*.04))){current=candidate;error=candidate.error;}
+        }
+        const elapsed=performance.now()-start;
+        if(elapsed-lastReport>250){lastReport=elapsed;self.postMessage({type:'progress',best,steps,elapsed});}
+      }
+      self.postMessage({type:'done',best,steps,elapsed:performance.now()-start});
+    }catch(err){self.postMessage({type:'error',message:err.message});}
+  };
+}
+function spectralWorkerSource(){return [eigen,edgeWeight,graphLaplacian,connectedGraph,modalRatios,makeSpectralMetric,isomorphicGraphs,searchWorker].map(f=>f.toString()).join('\n')+'\nsearchWorker();';}
+
+if(typeof module!=='undefined')module.exports={makeGraph,eigen,partials,synth,buildGraphImpulseResponse,wavBlob,wavBlobChannels,edgeWeight,replaceEdgeWeight,removeVertexEdges,graphLaplacian,connectedGraph,modalRatios,parseFrequencyRatios,constructWeightedGraph,makeSpectralMetric,spectralWorkerSource,isomorphicGraphs};
+if(typeof document!=='undefined'){
+// A shared wet boost keeps narrow graph resonances audible without normalizing each graph's IR.
+const $=id=>document.getElementById(id),ns='http://www.w3.org/2000/svg',RESONATOR_WET_GAIN=600,MASTER_GAIN=1.5;let mode='spectrum',workspace='hear',tool='strike',strike=0,listen=0,selected=null,history=[],drag=null,graph={n:3,points:[[160,150],[300,150],[440,150]],edges:[[0,1],[1,2]]},modes,groups,context,source,gain,dryGain,wetGain,convolver,limiter,finishTimer,decodedFile,fileToken=0,playToken=0,exporting=false;
+const modeHelp=document.createElement('details');modeHelp.className='full compact-help';modeHelp.innerHTML='<summary>О режиме озвучивания</summary>';$('modeNote').before(modeHelp);modeHelp.append($('modeNote'));
+$('edgeWeights').querySelector('summary').textContent='Свойства рёбер';
+const chartPanel=$('chart').closest('section');chartPanel.querySelector('h2').textContent='Резонансы графа';
+$('downloadProcessed').remove();$('download').textContent='Скачать WAV';
+const scaleNote=$('scale').parentElement.querySelector('.note'),searchIntro=$('searchPanel').querySelector('.search-content>.note'),explain=document.querySelector('.explain');
+function svg(tag,attrs,parent,text){const el=document.createElementNS(ns,tag);for(const[k,v]of Object.entries(attrs))el.setAttribute(k,String(v));if(text!==undefined)el.textContent=text;parent.appendChild(el);return el;}
+function stop(){playToken++;if(source){source.onended=null;try{source.stop();}catch{}source.disconnect();source=null;}if(finishTimer){clearTimeout(finishTimer);finishTimer=null;}for(const node of [dryGain,wetGain,convolver,limiter,gain])if(node)node.disconnect();dryGain=wetGain=convolver=limiter=gain=null;$('stop').disabled=true;$('play').textContent=mode==='resonator'?'▶ Play':'▶ Послушать';}
+function setMix(){if(!context)return;const wet=+$('mix').value/100;if(dryGain)dryGain.gain.setTargetAtTime(1-wet,context.currentTime,.02);if(wetGain)wetGain.gain.setTargetAtTime(wet*RESONATOR_WET_GAIN,context.currentTime,.02);}
+async function loadAudioFile(){
+  stop();const token=++fileToken,file=$('audioFile').files[0];decodedFile=null;
+  $('fileName').textContent=file?file.name:'Выберите файл, поддерживаемый браузером.';update();
+  if(!file)return;
+  $('status').textContent='Загружаем и декодируем '+file.name+'…';
+  try{
+    const Audio=window.AudioContext||window.webkitAudioContext;
+    if(!Audio)throw new Error('В этом браузере недоступен Web Audio.');
+    context??=new Audio();
+    const bytes=await file.arrayBuffer(),buffer=await context.decodeAudioData(bytes);
+    if(token!==fileToken)return;
+    decodedFile=buffer;update();$('status').textContent='Готово: '+file.name+' · '+buffer.duration.toFixed(1)+' с.';
+  }catch(err){if(token===fileToken){update();$('status').textContent='Не удалось открыть аудиофайл: '+err.message;}}
+}
+function createResonatorChain(audioContext,input,impulse,mix,volume){
+  const buffer=audioContext.createBuffer(1,impulse.length,audioContext.sampleRate);
+  buffer.copyToChannel(impulse,0);
+  const convolver=audioContext.createConvolver();convolver.normalize=false;convolver.buffer=buffer;
+  const source=audioContext.createBufferSource();source.buffer=input;
+  const dryGain=audioContext.createGain(),wetGain=audioContext.createGain(),gain=audioContext.createGain();
+  dryGain.gain.value=1-mix;wetGain.gain.value=mix*RESONATOR_WET_GAIN;gain.gain.value=volume*MASTER_GAIN;
+  const limiter=audioContext.createDynamicsCompressor();limiter.threshold.value=-6;limiter.knee.value=3;limiter.ratio.value=20;
+  source.connect(dryGain).connect(gain);
+  source.connect(convolver).connect(wetGain).connect(gain);
+  gain.connect(limiter).connect(audioContext.destination);
+  return{source,dryGain,wetGain,convolver,gain,limiter};
+}
+function graphImpulse(sampleRate){
+  return buildGraphImpulseResponse(partials(modes,'response',strike,listen,+$('scale').value),sampleRate,+$('decay').value);
+}
+function playResonator(token){
+  if(!decodedFile)throw new Error('Сначала загрузите аудиофайл.');
+  if(!graph.n)throw new Error('Добавьте вершину для возбуждения.');
+  const impulse=graphImpulse(context.sampleRate);
+  ({source,dryGain,wetGain,convolver,gain,limiter}=createResonatorChain(context,decodedFile,impulse,+$('mix').value/100,+$('volume').value/100));
+  source.onended=()=>{if(token===playToken)finishTimer=setTimeout(()=>{if(token===playToken){stop();$('status').textContent='Звук завершён.';}},Math.ceil(impulse.length/context.sampleRate*1000)+100);};
+  source.start();$('stop').disabled=false;$('play').textContent='↻ Play';
+  $('status').textContent='Резонатор: '+(strike+1)+' → '+(listen+1)+(impulse.some(value=>Math.abs(value)>1e-12)?'':' · отклик нулевой; при Wet=100% будет тишина.');
+}
+async function renderResonatorWav(input,impulse,mix,volume){
+  const Offline=window.OfflineAudioContext||window.webkitOfflineAudioContext;
+  if(!Offline)throw new Error('Этот браузер не поддерживает обработку звука для скачивания.');
+  const rate=input.sampleRate;
+  const channels=Math.min(2,input.numberOfChannels),frames=input.length+(mix>0?impulse.length-1:0);
+  if(frames*channels>40_000_000)throw new RangeError('Файл слишком длинный для обработки в браузере.');
+  const offline=new Offline(channels,frames,rate);
+  const chain=createResonatorChain(offline,input,impulse,mix,volume);
+  chain.source.start();
+  const rendered=await offline.startRendering();
+  return wavBlobChannels(Array.from({length:channels},(_,channel)=>rendered.getChannelData(channel)),rate);
+}
+function snapshot(){return JSON.stringify({graph,strike,listen});}
+function remember(value=snapshot()){history.push(value);if(history.length>100)history.shift();}
+function rebuild(){stop();graph.n=graph.points.length;graph.L=graphLaplacian(graph.n,graph.edges);strike=Math.max(0,Math.min(strike,graph.n-1));listen=Math.max(0,Math.min(listen,graph.n-1));modes=eigen(graph.L);update();}
+function choose(i,action=tool){if(workspace==='edit'){if(selected===null){selected=i;drawGraph();}else if(selected===i){selected=null;drawGraph();}else{remember();const a=selected,b=i,index=graph.edges.findIndex(([x,y])=>x===a&&y===b||x===b&&y===a);if(index<0)graph.edges.push([a,b]);else graph.edges.splice(index,1);selected=null;rebuild();}}else if(mode==='response'||mode==='resonator'){stop();if(action==='strike')strike=i;else listen=i;update();if(mode==='response'&&action==='strike')play();}}
+/** Apply a committed numeric field after validating its resulting vibration model.
+ * @param {HTMLInputElement} input
+ * @param {number} index
+ * @returns {void}
+ */
+function applyEdgeWeight(input,index){
+  try{
+    if(workspace!=='edit')throw new Error('Переключитесь в режим «Редактировать», чтобы изменить жёсткость.');
+    const weight=input.valueAsNumber;
+    if(!Number.isFinite(weight)||weight<=0)throw new RangeError('Введите конечную жёсткость больше нуля.');
+    const edges=replaceEdgeWeight(graph.edges,index,weight),L=graphLaplacian(graph.n,edges),updatedModes=eigen(L);
+    if(updatedModes.some(m=>!Number.isFinite(m.lambda)||m.v.some(value=>!Number.isFinite(value))))throw new RangeError('Жёсткость '+weight+' слишком велика для расчёта. Уменьшите значение.');
+    input.setCustomValidity('');input.setAttribute('aria-invalid','false');$('edgeWeightStatus').textContent='';
+    if(weight===edgeWeight(graph.edges[index]))return;
+    remember();stop();graph={...graph,edges,L};modes=updatedModes;update();
+    $('status').textContent='Жёсткость ребра '+(edges[index][0]+1)+' ↔ '+(edges[index][1]+1)+' изменена. Можно послушать новый звук или отменить изменение.';
+  }catch(err){input.setCustomValidity(err.message);input.setAttribute('aria-invalid','true');$('edgeWeightStatus').textContent=err.message;input.reportValidity();}
+}
+
+function drawEdgeWeightControls(){
+  const body=$('edgeWeightRows'),signature=graph.edges.map(([a,b])=>a+':'+b).join('|');
+  $('edgeWeights').hidden=!graph.edges.length;
+  if(body.dataset.signature!==signature){
+    // Pending blur events belong to the previous edge list.
+    for(const input of body.querySelectorAll('input'))input.onchange=null;
+    body.dataset.signature=signature;$('edgeWeightStatus').textContent='';
+    body.replaceChildren(...graph.edges.map((edge,index)=>{
+      const row=document.createElement('tr'),name=document.createElement('td'),value=document.createElement('td'),input=document.createElement('input');
+      name.textContent=`${edge[0]+1} ↔ ${edge[1]+1}`;
+      input.type='number';input.min='0';input.step='any';input.value=String(edgeWeight(edge));input.dataset.edgeIndex=String(index);
+      input.setAttribute('aria-label',`Жёсткость ребра ${edge[0]+1} ↔ ${edge[1]+1}`);input.setAttribute('aria-describedby','edgeWeightHelp edgeWeightStatus');
+      input.addEventListener('input',()=>{input.setCustomValidity('');input.setAttribute('aria-invalid','false');$('edgeWeightStatus').textContent='';});
+      input.onchange=()=>applyEdgeWeight(input,index);
+      input.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();applyEdgeWeight(input,index);}});
+      value.appendChild(input);row.append(name,value);return row;
+    }));
+  }
+  for(const input of body.querySelectorAll('input')){
+    input.disabled=workspace!=='edit';
+    if(document.activeElement!==input){
+      if(input.getAttribute('aria-invalid')==='true')$('edgeWeightStatus').textContent='';
+      input.value=String(edgeWeight(graph.edges[Number(input.dataset.edgeIndex)]));input.setCustomValidity('');input.setAttribute('aria-invalid','false');
+    }
+  }
+}
+function drawGraph(){const root=$('graph'),weighted=graph.edges.some(edge=>edgeWeight(edge)!==1),maximumWeight=Math.max(1e-15,...graph.edges.map(edgeWeight));root.replaceChildren();
+ for(const edge of graph.edges){const [i,j]=edge,weight=edgeWeight(edge),p=graph.points[i],q=graph.points[j],length=Math.hypot(q[0]-p[0],q[1]-p[1])||1,offset=0,dx=(q[0]-p[0])*offset/length,dy=(q[1]-p[1])*offset/length,line=svg('line',{x1:p[0]+dx,y1:p[1]+dy,x2:q[0]-dx,y2:q[1]-dy,'stroke-width':weighted?1+3*Math.sqrt(weight/maximumWeight):2,'data-weight':weight},root);svg('title',{},line,`Ребро ${i+1} ↔ ${j+1} · жёсткость ${weight.toPrecision(6)}`);}
+drawEdgeWeightControls();
+graph.points.forEach(([x,y],i)=>{const marked=workspace==='hear'&&mode!=='spectrum',struck=marked&&i===strike,heard=marked&&i===listen;const g=svg('g',{class:'node','data-index':i,tabindex:0,role:'button','aria-label':'Вершина '+(i+1)},root);if(heard)svg('circle',{cx:x,cy:y,r:23,fill:'none',stroke:'#ffba77','stroke-width':3},g);svg('circle',{cx:x,cy:y,r:17,fill:struck?'#7ce4b0':'#223543',stroke:workspace==='edit'&&selected===i?'#ffba77':struck?'#7ce4b0':'#5e7787','stroke-width':workspace==='edit'&&selected===i?4:2},g);const text=svg('text',{x,y},g,String(i+1));if(struck)text.style.fill='#10241a';g.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();choose(i);}});});$('graphMeta').textContent='Вершин: '+graph.n+' · Рёбер: '+graph.edges.length+(weighted?' · С весами':'');$('undo').disabled=!history.length;$('clear').disabled=!graph.n;}
+function point(e){const p=new DOMPoint(e.clientX,e.clientY).matrixTransform($('graph').getScreenCTM().inverse());return[Math.max(25,Math.min(575,p.x)),Math.max(25,Math.min(275,p.y))];}
+$('graph').addEventListener('pointerdown',e=>{if(e.button!==0&&e.button!==2)return;const node=e.target.closest('.node'),i=node?+node.dataset.index:null;if(e.button===2){e.preventDefault();if(drag)return;if(i!==null){if(workspace==='edit'){selected=i;removeVertex();}else choose(i,'listen');}return;}drag={id:e.pointerId,index:i,start:point(e),before:snapshot(),moved:false};$('graph').setPointerCapture(e.pointerId);});
+$('graph').addEventListener('pointermove',e=>{if(!drag||drag.id!==e.pointerId||workspace!=='edit'||drag.index===null)return;const p=point(e);if(Math.hypot(p[0]-drag.start[0],p[1]-drag.start[1])>4)drag.moved=true;if(drag.moved){graph.points[drag.index]=p;drawGraph();}});
+$('graph').addEventListener('pointerup',e=>{if(!drag||drag.id!==e.pointerId)return;const d=drag;drag=null;if(d.moved){remember(d.before);drawGraph();}else if(d.index!==null)choose(d.index,e.pointerType==='mouse'?'strike':tool);else if(workspace==='edit'){remember();graph.points.push(point(e));selected=null;rebuild();}});
+$('graph').addEventListener('contextmenu',e=>e.preventDefault());
+$('graph').addEventListener('pointercancel',()=>{if(drag?.moved){const old=JSON.parse(drag.before);graph=old.graph;drawGraph();}drag=null;});
+function removeVertex(){if(workspace!=='edit'||selected===null)return;remember();const i=selected;graph.points.splice(i,1);graph.edges=removeVertexEdges(graph.edges,i);strike=strike>i?strike-1:strike===i?0:strike;listen=listen>i?listen-1:listen===i?0:listen;selected=null;rebuild();}
+$('graph').addEventListener('keydown',e=>{if(e.key==='Delete'||e.key==='Backspace'){e.preventDefault();removeVertex();}if(e.key==='Escape'){selected=null;drawGraph();}});
+$('undo').addEventListener('click',()=>{if(!history.length)return;const old=JSON.parse(history.pop());graph=old.graph;strike=old.strike;listen=old.listen;selected=null;rebuild();});$('clear').addEventListener('click',()=>{remember();graph.points=[];graph.edges=[];selected=null;rebuild();});
+for(const name of ['edit','hear'])$(name).addEventListener('click',()=>{stop();workspace=name;selected=null;update();if(workspace==='edit')$('edgeWeights').open=true;});for(const name of ['strike','listen'])$(name+'Tool').addEventListener('click',()=>{tool=name;update();});
+function drawChart(){const root=$('chart');root.replaceChildren();const maxF=Math.max(4,Math.sqrt(graph.n),...groups.map(g=>g.f/+$('scale').value))*+$('scale').value,peak=Math.max(...groups.map(g=>Math.abs(g.amplitude)),1e-15);for(let tick=0;tick<=4;tick++){const x=42+tick*140;svg('line',{x1:x,y1:15,x2:x,y2:165,stroke:'#30424e','stroke-dasharray':'3 5'},root);svg('text',{x,y:190,fill:'#a8b8c4','text-anchor':'middle','font-size':12},root,String(Math.round(maxF*tick/4)));}svg('line',{x1:42,y1:165,x2:602,y2:165,stroke:'#5e7787'},root);groups.forEach(g=>{const x=42+560*g.f/maxF,h=140*Math.abs(g.amplitude)/peak;const bar=svg('rect',{x:x-4,y:165-h,width:8,height:Math.max(1,h),rx:3,fill:Math.abs(g.amplitude)>peak*1e-7?'#7ce4b0':'#486271'},root);svg('title',{},bar,`${g.f.toFixed(2)} Гц; λ=${g.lambda.toFixed(4)}; амплитуда ${g.amplitude.toPrecision(4)}`);});$('rows').replaceChildren(...groups.map(g=>{const tr=document.createElement('tr');for(const v of [g.lambda.toFixed(4),g.multiplicity,g.f.toFixed(2),g.amplitude.toPrecision(4)]){const td=document.createElement('td');td.textContent=v;tr.appendChild(td);}return tr;}));const active=groups.filter(g=>Math.abs(g.amplitude)>peak*1e-7);$('low').textContent=active.length?active[0].f.toFixed(1)+' Гц':'нет';$('active').textContent=active.length;}
+function update(){
+  groups=partials(modes,mode==='resonator'?'response':mode,strike,listen,+$('scale').value);
+  $('scaleOut').textContent=$('scale').value+' Гц';$('decayOut').textContent=(+$('decay').value).toFixed(1)+' с';$('volumeOut').textContent=$('volume').value+'%';
+  for(const name of ['spectrum','response','resonator'])$(name).setAttribute('aria-pressed',mode===name);
+  $('resonatorControls').hidden=mode!=='resonator';$('download').textContent=mode==='resonator'?'Скачать обработанный WAV':'Скачать WAV';$('download').disabled=exporting||(mode==='resonator'&&!decodedFile);
+  $('chartNote').textContent=mode==='resonator'?'Высота столбика — |амплитуда| отклика до общего усиления. Совпадающие частоты объединены.':'Высота столбика — |амплитуда| до нормировки громкости. Совпадающие частоты объединены.';
+  $('play').textContent=mode==='resonator'?'▶ Play':'▶ Послушать';$('edit').setAttribute('aria-pressed',workspace==='edit');$('hear').setAttribute('aria-pressed',workspace==='hear');
+  $('editTools').hidden=workspace!=='edit';$('listenTools').hidden=workspace!=='hear'||mode==='spectrum';$('legend').hidden=workspace!=='hear'||mode==='spectrum';
+  $('strikeTool').setAttribute('aria-pressed',tool==='strike');$('listenTool').setAttribute('aria-pressed',tool==='listen');
+  $('graphHint').textContent=workspace==='edit'?'Клик по фону — вершина; две вершины — ребро. Жёсткость — в свойствах рёбер.':mode==='spectrum'?'':'Выберите вершины удара и прослушивания.';$('graphHint').hidden=!$('graphHint').textContent;
+  $('modeNote').textContent=mode==='spectrum'?'Равная амплитуда у каждой моды. Кратные частоты складываются.':mode==='response'?'Единичный удар; слушаем смещение. Симметрия может погасить отдельные частоты.':'Загруженный звук проходит через отклик между выбранными вершинами.';
+  drawGraph();drawChart();
+  $('play').disabled=mode==='resonator'?!decodedFile||!graph.n:!groups.some(g=>Math.abs(g.amplitude)>1e-12);
+  $('status').textContent=mode==='resonator'?(decodedFile?'':'Загрузите аудиофайл для воспроизведения.'):graph.n===0?'Добавьте вершину.':graph.edges.length===0?'Соедините вершины, чтобы появились звучащие частоты.':'';
+}
+for(const id of ['scale','decay'])$(id).addEventListener('input',()=>{stop();update();});
+$('volume').addEventListener('input',()=>{$('volumeOut').textContent=$('volume').value+'%';if(gain)gain.gain.setTargetAtTime(+$('volume').value/100*MASTER_GAIN,context.currentTime,.02);});
+for(const name of ['spectrum','response','resonator'])$(name).addEventListener('click',()=>{stop();mode=name;update();});
+$('mix').addEventListener('input',()=>{$('mixOut').textContent=$('mix').value+'%';setMix();});$('audioFile').addEventListener('change',loadAudioFile);
+$('stop').addEventListener('click',()=>{stop();$('status').textContent='Воспроизведение остановлено.';});
+async function play(){
+  stop();const token=playToken;
+  try{
+    const Audio=window.AudioContext||window.webkitAudioContext;if(!Audio)throw new Error('В этом браузере недоступен Web Audio.');
+    context??=new Audio();await context.resume();if(token!==playToken)return;
+    if(mode==='resonator'){playResonator(token);return;}
+    let signal,peak;
+    ({signal,peak}=synth(groups,context.sampleRate,+$('decay').value));
+    if(peak<1e-14){$('status').textContent='В выбранной вершине нет колебательного отклика.';return;}
+    const buffer=context.createBuffer(1,signal.length,context.sampleRate);buffer.copyToChannel(signal,0);
+    source=context.createBufferSource();source.buffer=buffer;gain=context.createGain();gain.gain.value=+$('volume').value/100*MASTER_GAIN;
+    limiter=context.createDynamicsCompressor();limiter.threshold.value=-3;limiter.knee.value=3;limiter.ratio.value=20;
+    source.connect(gain).connect(limiter).connect(context.destination);
+    source.onended=()=>{if(token===playToken){stop();$('status').textContent='';}};
+    source.start();$('stop').disabled=false;$('play').textContent='↻ Ещё раз';$('status').textContent=mode==='spectrum'?'Звучит весь положительный спектр.':`Удар: ${strike+1} · слушаем: ${listen+1}`;
+  }catch(err){stop();$('status').textContent='Не удалось включить звук: '+err.message;}
+}
+let spectrumWorker=null,searchBest=null,searchTarget=null;
+function endSearch(){if(spectrumWorker){spectrumWorker.terminate();spectrumWorker=null;}$('searchStart').disabled=false;$('searchStop').disabled=true;$('searchProgress').hidden=true;$('searchApply').disabled=!searchBest;for(const id of ['searchSource','searchRatios','searchSize','searchSeconds'])$(id).disabled=false;}
+function showSearchBest(best){
+  searchBest=best;$('searchResult').hidden=false;$('searchApply').disabled=!!spectrumWorker;
+  const exact=best.method==='exact';
+  const distinct=[];
+  for(const r of best.ratios){const last=distinct.at(-1);if(last&&Math.abs(last.r-r)<1e-6)last.count++;else distinct.push({r,count:1});}
+  $('searchFound').textContent=distinct.map(({r,count})=>r.toFixed(4)+(count>1?' ×'+count:'')).join(' · ');
+  $('searchDistanceRow').hidden=exact;$('searchAccuracy').hidden=!exact;
+  if(exact)$('searchAccuracy').textContent='Максимальная ошибка: '+best.maximumErrorCents.toFixed(6)+' центов.';else $('searchDistance').textContent=best.error.toFixed(5);
+  $('searchFrequencyHeading').textContent=exact?'Получено':'Ближайшая частота';
+  $('searchResultNote').textContent=exact?'Полный граф с положительными жёсткостями пружин. В режиме «Весь спектр» прозвучат заданные частоты; амплитуды отклика на удар зависят от выбранных вершин.':'Таблица показывает ближайшие частоты; поиск учитывает также лишние моды и их кратности. Это не оценка отклика на удар.';
+  $('searchCompare').replaceChildren(...searchTarget.map((r,i)=>{
+    const nearest=exact?best.ratios[i]:best.ratios.reduce((a,b)=>Math.abs(Math.log(b/r))<Math.abs(Math.log(a/r))?b:a),cents=1200*Math.log2(nearest/r);
+    const tr=document.createElement('tr');
+    for(const value of [r.toFixed(4),nearest.toFixed(4),(cents>=0?'+':'')+cents.toFixed(1)]){const td=document.createElement('td');td.textContent=value;tr.appendChild(td);}return tr;
+  }));
+}
+function clearSearchResult(){searchBest=null;$('searchResult').hidden=true;$('searchApply').disabled=true;}
+function updateRatioTarget(){
+  clearSearchResult();
+  try{
+    const ratios=parseFrequencyRatios($('searchRatios').value);
+    $('searchRatios').setAttribute('aria-invalid','false');
+    $('searchRatiosStatus').textContent='Отношения: '+ratios.map(r=>r.toFixed(4)).join(' · ')+'; вершин: '+(ratios.length+1)+'.';
+    $('searchSize').value=String(ratios.length+1);
+  }catch(err){$('searchRatios').setAttribute('aria-invalid','true');$('searchRatiosStatus').textContent=err.message;}
+}
+function updateSearchSource(){
+  clearSearchResult();
+  const fromRatios=$('searchSource').value==='ratios';
+  $('searchRatiosWrap').hidden=!fromRatios;$('searchParameters').hidden=fromRatios;$('searchStop').hidden=fromRatios;
+  $('searchStart').textContent=fromRatios?'Построить граф':'Найти похожий';
+  $('searchReference').textContent=fromRatios?'Построим полный граф с точно заданными отношениями частот.':'Берём спектр текущего графа и ищем другую конструкцию с единичной жёсткостью рёбер. Исходная топология и её копии с другой нумерацией исключены. Рисунок можно продолжать редактировать.';
+  $('searchStatus').textContent=fromRatios?'Задайте частоты и нажмите «Построить граф».':'Нажмите «Найти похожий». Точное совпадение не гарантируется.';
+  if(fromRatios)updateRatioTarget();else $('searchSize').value=String(Math.max(2,Math.min(12,graph.n)));
+}
+$('searchSource').addEventListener('change',updateSearchSource);
+$('searchRatios').addEventListener('input',updateRatioTarget);
+function buildExactGraph(){
+  clearSearchResult();
+  try{
+    const target=parseFrequencyRatios($('searchRatios').value),result=constructWeightedGraph(target);
+    searchTarget=target;
+    $('searchReference').textContent='Заданные отношения: '+target.map(r=>r.toFixed(4)).join(' · ');
+    showSearchBest({...result,method:'exact'});
+    $('searchStatus').textContent='Граф построен. Частоты совпали в пределах численной точности. Загрузите граф, чтобы послушать его.';
+  }catch(err){$('searchStatus').textContent='Не удалось построить граф: '+err.message;}
+}
+function startReferenceSearch(){
+  if(spectrumWorker)return;
+  let target,n,seconds,original=null;
+  try{
+    if(graph.n>12)throw new RangeError('Пока поиск поддерживает исходные графы до 12 вершин.');
+    if(graph.n<2||!graph.edges.length)throw new RangeError('Нарисуйте граф хотя бы с одним ребром.');
+    target=modalRatios(graph.n,graph.edges);
+    if(target.at(-1)>8)throw new RangeError('Слишком широкий спектр: отношение верхней частоты к нижней больше 8.');
+    original={n:graph.n,edges:graph.edges.map(([a,b])=>[a,b])};
+    n=Number($('searchSize').value);seconds=Number($('searchSeconds').value);
+    if(!Number.isInteger(n)||n<2||n>12)throw new RangeError('Число вершин — целое от 2 до 12.');
+    if(!Number.isFinite(seconds)||seconds<1||seconds>30)throw new RangeError('Время поиска — от 1 до 30 секунд.');
+    if(!window.Worker)throw new Error('В этом браузере недоступен фоновый поиск.');
+  }catch(err){$('searchStatus').textContent=err.message;return;}
+  searchTarget=target;clearSearchResult();$('searchReference').textContent='Ищем по снимку графа: '+original.n+' вершин · '+original.edges.length+' рёбер. Цель: '+target.map(r=>r.toFixed(4)).join(' · ');
+  let url;
+  try{
+    url=URL.createObjectURL(new Blob([spectralWorkerSource()],{type:'text/javascript'}));
+    spectrumWorker=new Worker(url);
+    URL.revokeObjectURL(url);
+    const worker=spectrumWorker;
+    $('searchStart').disabled=true;$('searchStop').disabled=false;$('searchProgress').hidden=false;$('searchProgress').value=0;
+    for(const id of ['searchSource','searchRatios','searchSize','searchSeconds'])$(id).disabled=true;
+    $('searchStatus').textContent='Ищем связный граф без весов…';
+    worker.onmessage=({data})=>{
+      if(spectrumWorker!==worker)return;
+      if(data.type==='error'){endSearch();$('searchStatus').textContent='Не удалось выполнить поиск: '+data.message;return;}
+      if(data.best)showSearchBest(data.best);$('searchProgress').value=Math.min(1,data.elapsed/(seconds*1000));
+      $('searchStatus').textContent='Проверено изменений: '+data.steps+' · '+(data.elapsed/1000).toFixed(1)+' с';
+      if(data.type==='done'){endSearch();if(!data.best){$('searchStatus').textContent='Подходящий связный граф не найден за отведённое время. Попробуйте увеличить время или изменить число вершин.';return;}$('searchStatus').textContent+=(data.best.error<1e-9?' · Спектры совпали в пределах численной точности.':' · Поиск завершён. Показан лучший найденный вариант.');}
+    };
+    worker.onerror=()=>{if(spectrumWorker!==worker)return;endSearch();$('searchStatus').textContent='Браузер не смог запустить фоновый поиск. Попробуйте другой браузер.';};
+    worker.postMessage({n,target,seconds,original});
+  }catch(err){if(url)URL.revokeObjectURL(url);endSearch();$('searchStatus').textContent='Не удалось начать поиск: '+err.message;}
+}
+$('searchStart').addEventListener('click',()=>{if($('searchSource').value==='ratios')buildExactGraph();else startReferenceSearch();});
+$('searchStop').addEventListener('click',()=>{endSearch();$('searchStatus').textContent=searchBest?'Поиск остановлен. Лучший полученный вариант сохранён.':'Поиск остановлен до получения результата.';});
+$('searchApply').addEventListener('click',()=>{
+  if(!searchBest||spectrumWorker)return;
+  remember();const n=searchBest.n;
+  graph={n,edges:searchBest.edges.map(e=>e.slice()),points:Array.from({length:n},(_,i)=>[300+230*Math.cos(i*2*Math.PI/n-Math.PI/2),150+110*Math.sin(i*2*Math.PI/n-Math.PI/2)])};
+  mode='spectrum';workspace='hear';strike=listen=0;selected=null;rebuild();
+  $('searchStatus').textContent='Граф загружен. Нажмите «Послушать». Замену можно отменить в редакторе.';
+  $('graph').scrollIntoView({behavior:'smooth',block:'center'});
+});
+
+$('play').addEventListener('click',play);
+$('download').addEventListener('click',async()=>{
+  if(exporting)return;
+  exporting=true;$('download').disabled=true;
+  try{
+    let blob,name;
+    if(mode==='resonator'){
+      if(!decodedFile)throw new Error('Сначала загрузите аудиофайл.');
+      $('status').textContent='Обрабатываем аудиофайл…';
+      const impulse=graphImpulse(decodedFile.sampleRate),mix=+$('mix').value/100,volume=+$('volume').value/100;
+      blob=await renderResonatorWav(decodedFile,impulse,mix,volume);
+      name=($('audioFile').files[0]?.name||'audio').replace(/\.[^.]+$/,'')+'-graph-resonator.wav';
+    }else{
+      const rate=44100;let signal,peak;
+      ({signal,peak}=synth(groups,rate,+$('decay').value));
+      if(peak<1e-14)throw new Error('В этом графе нет звучащего сигнала.');
+      blob=wavBlob(signal,rate);name=`graph-timbres-spring-${mode}.wav`;
+    }
+    const url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=name;link.click();
+    setTimeout(()=>URL.revokeObjectURL(url),30000);$('status').textContent='WAV скачан.';
+  }catch(err){$('status').textContent='Не удалось создать WAV: '+err.message;}
+  finally{exporting=false;$('download').disabled=mode==='resonator'&&!decodedFile;}
+});
+rebuild();updateSearchSource();
+}
+</script></body></html>

@@ -208,7 +208,7 @@ function createHybridEditor(get,initialGraph,getDelay,onChange,onStatus,text,net
  };
  get('delete').onclick=removeSelection;
  get('undo').onclick=()=>{if(!history.length)return;const previous=history[history.length-1];history=history.slice(0,-1);selection=null;edgeStart=null;drag=null;if(network&&previous.settings)network.set(previous.settings);changed(previous.graph);};
- get('clear').onclick=()=>{selection=null;edgeStart=null;drag=null;commit(createHybridPreset('single-r'));};
+ if(get('clear'))get('clear').onclick=()=>{selection=null;edgeStart=null;drag=null;commit(createHybridPreset('single-r'));};
  get('preset').onchange=event=>{if(!event.target.value)return;const name=event.target.value,next=createHybridPreset(name);checkpoint();if(network)network.set(hybridPresetSettings(name));selection=null;edgeStart=null;drag=null;event.target.value='';changed(next);};
  document.addEventListener('keydown',event=>{
   if(['INPUT','SELECT','TEXTAREA'].includes(document.activeElement.tagName)||document.activeElement.isContentEditable)return;
